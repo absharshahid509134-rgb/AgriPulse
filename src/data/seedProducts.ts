@@ -831,13 +831,190 @@ export const VALID_DEMO_PROMO_CODES: {
     discountPct: 10,
     maxDiscountPaise: 50000, // Max ₹500
     minSubtotalPaise: 50000, // Min ₹500
-    description: 'Demo Promotion: 10% off on orders above ₹500 (up to ₹500 discount)',
+    description: 'Farmer First: 10% off on orders above ₹500 (up to ₹500 discount)',
+  },
+  {
+    code: 'HARVEST15',
+    discountPct: 15,
+    maxDiscountPaise: 75000, // Max ₹750
+    minSubtotalPaise: 100000, // Min ₹1,000
+    description: 'Harvest Festival Special: 15% off on orders above ₹1,000 (up to ₹750 discount)',
   },
   {
     code: 'RABISEASON',
     discountPct: 15,
     maxDiscountPaise: 75000, // Max ₹750
     minSubtotalPaise: 150000, // Min ₹1,500
-    description: 'Demo Promotion: 15% off on Rabi inputs above ₹1,500 (up to ₹750 discount)',
+    description: 'Rabi Season Special: 15% off on Rabi inputs above ₹1,500 (up to ₹750 discount)',
+  },
+  {
+    code: 'AGRI500',
+    discountPct: 20,
+    maxDiscountPaise: 50000, // Max ₹500
+    minSubtotalPaise: 200000, // Min ₹2,000
+    description: 'Mega Agri Voucher: 20% off up to ₹500 on orders above ₹2,000',
   },
 ];
+
+// Helper to enrich base products with complete ecommerce metadata
+function enrichProducts(base: StoreProduct[]): StoreProduct[] {
+  return base.map((p, idx) => {
+    const slug = p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    const sku = `AGRI-${p.id.toUpperCase()}`;
+    const rating = Number((4.6 + ((idx % 4) * 0.1)).toFixed(1));
+    const reviewCount = 28 + ((idx * 7) % 75);
+
+    // Contextual highlights
+    let highlights = [
+      'Quality tested and approved under official agricultural standards',
+      'Optimized for Indian climatic conditions and soil types',
+      'Backed by manufacturer technical support and field guidance',
+      'Direct doorstep farm delivery across registered agricultural PIN codes',
+    ];
+
+    if (p.category.includes('Seeds')) {
+      highlights = [
+        'Certified seed lot with >85% lab germination guarantee and high physical purity',
+        'Bred for high grain yield, strong tillering, and regional disease tolerance',
+        'Treated with seed-protectant bio-agents for vigorous seedling emergence',
+        'Directly compatible with zero-till and conventional seed drills',
+      ];
+    } else if (p.category.includes('Fertilizers')) {
+      highlights = [
+        '100% compliant with Fertilizer Control Order (FCO) analytical purity standards',
+        'Fast-acting formulation ensures targeted vegetative and reproductive uptake',
+        'High water solubility eliminates nozzle clogging in drip and foliar systems',
+        'Corrects hidden hunger and promotes uniform green canopy development',
+      ];
+    } else if (p.category.includes('Crop protection')) {
+      highlights = [
+        'Integrated Pest Management (IPM) compliant formulation with minimal ecological impact',
+        'Rapid contact and translaminar action against targeted pests and foliar blights',
+        'Zero hazardous residue when applied according to label safety intervals',
+        'Compatible with standard knapsack sprayers and micronutrient tank mixes',
+      ];
+    } else if (p.category.includes('Soil testing')) {
+      highlights = [
+        'Direct instant measurement at root-zone depth without lab turnaround delay',
+        'Heavy-duty corrosion-resistant probes engineered for tough field soils',
+        'Calibrated scale tailored for Indian agro-climatic conditions and pH ranges',
+        'Helps optimize fertilizer application and prevent costly over-irrigation',
+      ];
+    } else if (p.category.includes('Sprayers') || p.category.includes('Irrigation')) {
+      highlights = [
+        'Heavy-duty virgin polymers and corrosion-proof brass/alloy fittings',
+        'Precision pressure regulation ensures uniform droplet dispersion across canopy',
+        'Ergonomic dual-strap harness and back padding for comfortable day-long spraying',
+        'Readily available spare parts and nozzle kits across all major farming districts',
+      ];
+    }
+
+    // Contextual specifications
+    const specifications = [
+      { label: 'Category', value: p.category },
+      { label: 'Brand', value: p.brand },
+      { label: 'Model / SKU', value: sku },
+      { label: 'Packaging', value: p.packSize },
+      { label: 'Target Crops', value: p.compatibleCrops.join(', ') || 'All Major Agricultural Crops' },
+      { label: 'Seasonal Suitability', value: p.seasonTag },
+      { label: 'Country of Origin', value: 'India' },
+      { label: 'Quality Standard', value: 'FCO / ICAR / BIS Quality Benchmarked' },
+      { label: 'Storage Condition', value: p.storageInstructions },
+      { label: 'Application Method', value: p.usageInstructions.slice(0, 100) + '...' },
+    ];
+
+    // Contextual FAQs
+    const faqs = [
+      {
+        question: `How should ${p.name} be applied on my farm?`,
+        answer: p.usageInstructions,
+      },
+      {
+        question: `How should I safely store unused quantities?`,
+        answer: p.storageInstructions,
+      },
+      {
+        question: 'Is this eligible for demo discounts and free delivery?',
+        answer: 'Yes! All demo orders above ₹999 qualify for Free Demo Shipping. You can also apply coupon KISAN10 at checkout for an instant 10% discount.',
+      },
+      {
+        question: 'What is the return or replacement policy for this product?',
+        answer: 'AgriSense provides a 7-day demo replacement window if the delivered packaging is damaged, broken, or does not match specifications.',
+      },
+    ];
+
+    // Customer reviews
+    const reviews = [
+      {
+        id: `rev-${p.id}-1`,
+        userName: 'Sukhwinder Singh Gill',
+        rating: 5,
+        title: 'Outstanding quality and very fast delivery to our farm gate',
+        comment: `We applied this across 5 acres in Taraori block. Exactly as described, packaging was completely intact and results in the field were visible within days.`,
+        date: '2026-10-08',
+        verifiedPurchase: true,
+      },
+      {
+        id: `rev-${p.id}-2`,
+        userName: 'Rameshwar Patidar',
+        rating: 4,
+        title: 'Reliable agricultural input, genuine batch',
+        comment: `Good product with clear batch details and manufacturing date. Excellent value compared to local retail prices. Will order again next season.`,
+        date: '2026-09-29',
+        verifiedPurchase: true,
+      },
+    ];
+
+    // Related products (picking 3 other products in same category or adjacent)
+    const relatedProductIds = base
+      .filter((other) => other.id !== p.id && (other.category === p.category || other.seasonTag === p.seasonTag))
+      .slice(0, 4)
+      .map((o) => o.id);
+
+    return {
+      ...p,
+      slug,
+      sku,
+      rating: p.rating ?? rating,
+      reviewCount: p.reviewCount ?? reviewCount,
+      highlights: p.highlights ?? highlights,
+      specifications: p.specifications ?? specifications,
+      manufacturer: p.manufacturer ?? {
+        name: `${p.brand.replace(/ \(.*\)/, '')} Agritech Industries Ltd.`,
+        originCountry: 'India',
+        address: 'National Agri-Corridor, Karnal / Ludhiana Industrial Cluster, India',
+        supportContact: 'Toll-Free Agri Helpline: 1800-180-1551 (Mon–Sat 9AM–6PM)',
+      },
+      seller: p.seller ?? {
+        name: p.sellerName,
+        businessType: 'Verified Agricultural Hub & Cooperative Supplier',
+        returnPolicy: '7 Days Replacement for sealed input bags or defective equipment.',
+        sellerRating: 4.8,
+      },
+      warranty: p.warranty ?? {
+        durationMonths: p.category.includes('kits') || p.category.includes('tools') || p.category.includes('Sprayers') ? 12 : 6,
+        warrantyType: p.category.includes('Seeds') ? 'Purity & Germination Assurance' : 'Manufacturer Defect Warranty',
+        coverage: 'Covers physical manufacturing defects, seal integrity, and FCO analytical standards.',
+        claimProcedure: 'Contact support with order ID and batch photos via the AgriSense Account / Orders desk.',
+      },
+      faqs: p.faqs ?? faqs,
+      reviews: p.reviews ?? reviews,
+      relatedProductIds: p.relatedProductIds ?? (relatedProductIds.length > 0 ? relatedProductIds : ['prod-101', 'prod-201', 'prod-501']),
+      offers: p.offers ?? [
+        { code: 'KISAN10', title: 'Farmer First 10% Off', discountText: 'Save 10% on orders above ₹500 (up to ₹500)' },
+        { code: 'HARVEST15', title: 'Harvest Festival 15% Off', discountText: 'Save 15% on orders above ₹1,000' },
+        { code: 'AGRI500', title: 'Mega Crop Care Voucher', discountText: 'Save ₹500 on orders above ₹2,000' },
+      ],
+      gallery: [
+        'Main Front View',
+        'Packaging & FCO Label',
+        'Batch & Analytical Spec',
+        'Field Application Guide',
+      ],
+    };
+  });
+}
+
+// Export the enriched product catalog
+export const ENRICHED_STORE_PRODUCTS: StoreProduct[] = enrichProducts(SEED_STORE_PRODUCTS);
+

@@ -1,28 +1,44 @@
 import React, { useState } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import {
   Eye,
   EyeOff,
-  Sprout,
-  CloudSun,
-  Stethoscope,
+  Store,
+  Building2,
   Lock,
   Mail,
   CheckCircle2,
   AlertCircle,
-  HelpCircle,
   Sparkles,
+  ArrowRight,
+  Sprout,
+  ShieldCheck,
+  TrendingUp,
+  Package,
+  Truck,
+  Copy,
+  Check,
   Upload,
 } from 'lucide-react';
 import { AgriPulseLogo } from '../components/AgriPulseLogo';
 import {
-  DEMO_ACCOUNT_EMAIL,
-  DEMO_ACCOUNT_PASSWORD,
+  DEMO_SELLER_EMAIL,
+  DEMO_SELLER_PASSWORD,
+  DEMO_FARMER_EMAIL,
+  DEMO_FARMER_PASSWORD,
   useAgriPulse,
 } from '../context/AgriPulseContext';
 
 export const LoginPage: React.FC = () => {
-  const { session, loginWithCredentials, customLogoUrl, setCustomLogoUrl } = useAgriPulse();
+  const {
+    session,
+    loginWithCredentials,
+    loginAsSellerDemo,
+    loginAsFarmerDemo,
+    customLogoUrl,
+    setCustomLogoUrl,
+  } = useAgriPulse();
+
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -33,67 +49,82 @@ export const LoginPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
-  const [showHelpModal, setShowHelpModal] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
-  // If already logged in, redirect to /home (or intended protected route)
+  // If already logged in, redirect to respective portal
   if (session) {
-    const fromPath = (location.state as { from?: string } | null)?.from || '/home';
-    return <Navigate to={fromPath} replace />;
+    const fromPath = (location.state as { from?: string } | null)?.from;
+    if (fromPath) {
+      return <Navigate to={fromPath} replace />;
+    }
+    return <Navigate to={session.portalType === 'seller' ? '/seller' : '/home'} replace />;
   }
 
   const validateFields = (emailVal: string, passVal: string) => {
     const errs: { email?: string; password?: string } = {};
-    const trimmedEmail = emailVal.trim();
-    if (!trimmedEmail) {
-      errs.email = 'Please enter your farmer account email address.';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
-      errs.email = 'Please enter a valid email format (e.g., farmer.demo@AgriPulse.in).';
+    const trimmed = emailVal.trim();
+    if (!trimmed) {
+      errs.email = 'Please enter your registered seller or vendor email address.';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      errs.email = 'Please enter a valid email address (e.g., seller.demo@kisanmart.in).';
     }
     if (!passVal) {
       errs.password = 'Please enter your account password.';
     } else if (passVal.length < 6) {
-      errs.password = 'Password must be at least 6 characters long.';
+      errs.password = 'Password must be at least 6 characters.';
     }
     setFieldErrors(errs);
     return Object.keys(errs).length === 0;
   };
 
-  const performLogin = async (emailVal: string, passVal: string) => {
+  const handleSellerLogin = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (isSubmitting) return;
     setErrorMsg(null);
-    if (!validateFields(emailVal, passVal)) return;
+    if (!validateFields(email, password)) return;
 
     setIsSubmitting(true);
     try {
-      const result = await loginWithCredentials(emailVal, passVal, rememberMe);
-      if (result.ok) {
-        const target = (location.state as { from?: string } | null)?.from || '/home';
-        navigate(target, { replace: true });
+      const res = await loginWithCredentials(email, password, rememberMe, 'seller');
+      if (res.ok) {
+        navigate(res.portal === 'seller' ? '/seller' : '/home', { replace: true });
       } else {
-        setErrorMsg(result.error || 'Unable to sign in. Please check your credentials.');
+        setErrorMsg(res.error || 'Invalid credentials.');
       }
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    void performLogin(email, password);
-  };
-
-  const handleUseDemoAccount = () => {
-    setEmail(DEMO_ACCOUNT_EMAIL);
-    setPassword(DEMO_ACCOUNT_PASSWORD);
-    setFieldErrors({});
+  const handleInstantDemoSeller = async () => {
+    setIsSubmitting(true);
     setErrorMsg(null);
-    void performLogin(DEMO_ACCOUNT_EMAIL, DEMO_ACCOUNT_PASSWORD);
+    try {
+      const res = await loginAsSellerDemo();
+      if (res.ok) {
+        navigate('/seller', { replace: true });
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleFillOnly = () => {
-    setEmail(DEMO_ACCOUNT_EMAIL);
-    setPassword(DEMO_ACCOUNT_PASSWORD);
+  const handleInstantDemoFarmer = async () => {
+    setIsSubmitting(true);
+    setErrorMsg(null);
+    try {
+      const res = await loginAsFarmerDemo();
+      if (res.ok) {
+        navigate('/home', { replace: true });
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleFillSellerDemo = () => {
+    setEmail(DEMO_SELLER_EMAIL);
+    setPassword(DEMO_SELLER_PASSWORD);
     setFieldErrors({});
     setErrorMsg(null);
   };
@@ -107,9 +138,7 @@ export const LoginPage: React.FC = () => {
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith('image/') || file.size > 2 * 1024 * 1024) {
-      return;
-    }
+    if (!file.type.startsWith('image/') || file.size > 2 * 1024 * 1024) return;
     const reader = new FileReader();
     reader.onload = () => {
       if (typeof reader.result === 'string') {
@@ -120,30 +149,22 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-warmbg flex flex-col lg:flex-row">
-      {/* Left Hero Panel */}
-      <section
-        aria-label="AgriPulse Platform Introduction"
-        className="lg:w-1/2 bg-forest-950 text-white p-6 sm:p-10 lg:p-14 flex flex-col justify-between relative overflow-hidden"
-      >
-        {/* Subtle agricultural terrace contour SVG background */}
-        <div
-          className="absolute inset-0 opacity-10 pointer-events-none"
-          aria-hidden="true"
-          style={{
-            backgroundImage:
-              'radial-gradient(circle at 20% 20%, #5dc379 0%, transparent 45%), radial-gradient(circle at 80% 80%, #d69d37 0%, transparent 45%)',
-          }}
-        />
-
-        {/* Top Logo & Tagline */}
-        <div className="relative z-10 flex items-center justify-between gap-4">
-          <AgriPulseLogo size="lg" theme="light" showTagline />
+    <div className="min-h-screen bg-slate-900 flex flex-col justify-between text-slate-100">
+      {/* Top Header */}
+      <header className="bg-forest-950 border-b border-forest-800/80 px-4 sm:px-8 py-3.5 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <AgriPulseLogo size="md" theme="light" />
+          <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+            <Store className="w-3.5 h-3.5" />
+            Seller Central
+          </span>
+        </div>
+        <div className="flex items-center gap-3 text-xs">
           <label
-            title="Upload custom AGRIPULSE logo image"
-            className="cursor-pointer inline-flex items-center gap-1.5 text-[11px] font-medium text-forest-200 hover:text-white bg-forest-900/90 hover:bg-forest-800 border border-forest-700 px-2.5 py-1.5 rounded-xl transition-colors"
+            title="Upload custom logo"
+            className="cursor-pointer hidden md:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-forest-900 hover:bg-forest-800 text-forest-200 hover:text-white border border-forest-700 transition"
           >
-            <Upload className="w-3.5 h-3.5 text-leaf-400" />
+            <Upload className="w-3.5 h-3.5 text-emerald-400" />
             <span>{customLogoUrl ? 'Change Logo' : 'Upload Logo'}</span>
             <input
               type="file"
@@ -152,353 +173,286 @@ export const LoginPage: React.FC = () => {
               className="sr-only"
             />
           </label>
-        </div>
-
-        {/* Center Hero Content & Restrained Agricultural Illustration */}
-        <div className="relative z-10 my-8 lg:my-auto max-w-xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-forest-900 border border-forest-700 text-leaf-300 text-xs font-semibold mb-4">
+          <Link
+            to="/farmer/login"
+            className="px-3 py-1.5 rounded-xl bg-forest-900 hover:bg-forest-800 text-emerald-300 hover:text-emerald-200 border border-emerald-500/30 transition flex items-center gap-1.5 font-medium"
+          >
             <Sprout className="w-3.5 h-3.5" />
-            <span>Intelligent Farm Digital Twin & Early Crop-Stress Detection</span>
+            <span>Farmer Portal Sign In</span>
+          </Link>
+          <Link
+            to="/signup"
+            className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition shadow-sm"
+          >
+            Register Seller Account
+          </Link>
+        </div>
+      </header>
+
+      {/* Main Split Section */}
+      <main className="max-w-6xl mx-auto w-full px-4 py-8 sm:py-12 flex-1 flex flex-col lg:flex-row items-center gap-8 lg:gap-14">
+        {/* Left Hero Card */}
+        <div className="lg:w-1/2 w-full space-y-6">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-semibold">
+            <ShieldCheck className="w-4 h-4 text-emerald-400" />
+            <span>AgriPulse Verified Agro-Seller & Mandi Network</span>
           </div>
 
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-white leading-tight">
-            Your Farm. Your Intelligence.
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-tight">
+            Seller Central Sign In
           </h1>
-          <p className="mt-3 text-sm sm:text-base text-forest-100 leading-relaxed">
-            Understand your crops, anticipate risks, and make smarter farming decisions.
+
+          <p className="text-base text-slate-300 leading-relaxed">
+            Manage your agricultural supply business. List certified seed lots, fertilizers, crop
+            protection, and machinery, fulfill farmer orders, track dispatch tracking IDs, and manage
+            weekly mandi settlements.
           </p>
 
-          {/* Restrained Agricultural Digital Twin Field Illustration */}
-          <div className="mt-6 rounded-2xl bg-forest-900/80 border border-forest-800 p-4 shadow-inner">
-            <div className="flex items-center justify-between text-xs text-forest-200 mb-3">
-              <span className="font-semibold text-white">
-                Field Digital Twin Overview — Sample Farm Snapshot
-              </span>
-              <span className="px-2 py-0.5 rounded bg-leaf-500/20 text-leaf-300 text-[10px] font-bold">
-                Measure • Understand • Predict • Protect
-              </span>
+          {/* Value Props for Sellers */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+            <div className="rounded-2xl bg-forest-900/60 border border-forest-800 p-4">
+              <Package className="w-5 h-5 text-emerald-400 mb-2" />
+              <h2 className="text-xs font-bold text-white">Live Catalog Management</h2>
+              <p className="text-[11px] text-slate-300 mt-0.5">
+                Add, price & manage inventory in seconds
+              </p>
             </div>
-            <div className="grid grid-cols-3 gap-2.5 text-xs">
-              <div className="bg-forest-950/70 border border-forest-800/80 rounded-xl p-3">
-                <span className="text-[10px] uppercase tracking-wider text-forest-300 block">
-                  Plot A1 • Basmati
-                </span>
-                <span className="text-sm font-bold text-leaf-300 mt-0.5 block">
-                  Maturation
-                </span>
-                <span className="text-[11px] text-forest-200 mt-0.5 block">
-                  Moisture: 51% (Rec.)
-                </span>
-              </div>
-              <div className="bg-forest-950/70 border border-forest-800/80 rounded-xl p-3">
-                <span className="text-[10px] uppercase tracking-wider text-forest-300 block">
-                  Plot A2 • Wheat
-                </span>
-                <span className="text-sm font-bold text-harvest-300 mt-0.5 block">
-                  Emergence
-                </span>
-                <span className="text-[11px] text-forest-200 mt-0.5 block">
-                  Irrigation Due Tue
-                </span>
-              </div>
-              <div className="bg-forest-950/70 border border-forest-800/80 rounded-xl p-3">
-                <span className="text-[10px] uppercase tracking-wider text-forest-300 block">
-                  Karnal Forecast
-                </span>
-                <span className="text-sm font-bold text-white mt-0.5 block">
-                  29°C • 58% RH
-                </span>
-                <span className="text-[11px] text-forest-200 mt-0.5 block">
-                  Fri Shower Watch
-                </span>
-              </div>
+            <div className="rounded-2xl bg-forest-900/60 border border-forest-800 p-4">
+              <Truck className="w-5 h-5 text-emerald-400 mb-2" />
+              <h2 className="text-xs font-bold text-white">Farmer Order Dispatch</h2>
+              <p className="text-[11px] text-slate-300 mt-0.5">
+                Automated shipping slips & GST invoices
+              </p>
+            </div>
+            <div className="rounded-2xl bg-forest-900/60 border border-forest-800 p-4">
+              <TrendingUp className="w-5 h-5 text-emerald-400 mb-2" />
+              <h2 className="text-xs font-bold text-white">Weekly Payouts</h2>
+              <p className="text-[11px] text-slate-300 mt-0.5">
+                0% demo commission & direct NEFT settlements
+              </p>
             </div>
           </div>
 
-          {/* Three Compact Feature Highlights */}
-          <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="bg-forest-900/60 border border-forest-800 rounded-xl p-3.5 flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-leaf-500/20 text-leaf-300 shrink-0">
+          {/* Bridge to Farmer Portal */}
+          <div className="rounded-2xl bg-emerald-950/70 border border-emerald-800/60 p-4 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm">
                 <Sprout className="w-4 h-4" />
               </div>
               <div>
-                <h2 className="text-xs font-bold text-white">Smart Farm Monitoring</h2>
-                <p className="text-[11px] text-forest-200 mt-0.5">
-                  Multi-farm plots, crop stages, soil logs, and activity calendars.
+                <p className="text-xs font-bold text-white">Are you a Farmer?</p>
+                <p className="text-[11px] text-emerald-200">
+                  Access crop stress digital twin, 100-disease encyclopedia & weather alerts.
                 </p>
               </div>
             </div>
-
-            <div className="bg-forest-900/60 border border-forest-800 rounded-xl p-3.5 flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-harvest-500/20 text-harvest-300 shrink-0">
-                <CloudSun className="w-4 h-4" />
-              </div>
-              <div>
-                <h2 className="text-xs font-bold text-white">Weather Intelligence</h2>
-                <p className="text-[11px] text-forest-200 mt-0.5">
-                  7-day forecasts, rainfall logs, and cautious field advisories.
-                </p>
-              </div>
-            </div>
-
-            <div className="bg-forest-900/60 border border-forest-800 rounded-xl p-3.5 flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-sky-500/20 text-sky-300 shrink-0">
-                <Stethoscope className="w-4 h-4" />
-              </div>
-              <div>
-                <h2 className="text-xs font-bold text-white">Crop Health Insights</h2>
-                <p className="text-[11px] text-forest-200 mt-0.5">
-                  Symptom analysis, 52-term dictionary, agricultural store & schemes.
-                </p>
-              </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={handleInstantDemoFarmer}
+                className="px-2.5 py-1.5 rounded-lg bg-emerald-900 hover:bg-emerald-800 text-emerald-200 text-xs font-semibold border border-emerald-700 transition"
+              >
+                1-Click Farmer
+              </button>
+              <Link
+                to="/farmer/login"
+                className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition whitespace-nowrap"
+              >
+                Farmer Sign In →
+              </Link>
             </div>
           </div>
         </div>
 
-        {/* Left Footer */}
-        <div className="relative z-10 text-xs text-forest-300 flex flex-wrap items-center justify-between gap-2 pt-4 border-t border-forest-800/80">
-          <span>AGRIPULSE — Measure. Understand. Predict. Protect.</span>
-          <span>Offline-Capable Demo Ready</span>
-        </div>
-      </section>
-
-      {/* Right Login Form Panel */}
-      <main className="lg:w-1/2 flex-1 flex flex-col justify-center items-center p-6 sm:p-10 lg:p-14">
-        <div className="w-full max-w-md bg-white rounded-2xl shadow-sm border border-slate-200/90 p-6 sm:p-8">
-          <div className="flex items-center justify-between mb-5">
-            <div>
-              <h2 className="text-xl font-bold text-slate-900">Farmer Sign In</h2>
-              <p className="text-xs text-slate-600 mt-0.5">
-                Access your personalized farm dashboard & agricultural store
-              </p>
-            </div>
-            <div className="lg:hidden">
-              <AgriPulseLogo size="sm" theme="dark" />
-            </div>
-          </div>
-
-          {/* Demo Account Quick Access Box */}
-          <div className="mb-6 rounded-xl bg-forest-50/90 border border-forest-200 p-4">
-            <div className="flex items-center justify-between gap-2 mb-2">
-              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-forest-900">
-                <Sparkles className="w-4 h-4 text-forest-700" />
-                Instant Demo Farmer Account
-              </span>
-              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white text-forest-800 border border-forest-200">
-                No API Key Required
-              </span>
-            </div>
-
-            <div className="space-y-1.5 text-xs bg-white rounded-lg p-2.5 border border-forest-100 mb-3">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-slate-500">Email:</span>
-                <div className="flex items-center gap-1.5">
-                  <code className="font-mono font-semibold text-slate-900">
-                    {DEMO_ACCOUNT_EMAIL}
-                  </code>
-                  <button
-                    type="button"
-                    onClick={() => handleCopy(DEMO_ACCOUNT_EMAIL, 'email')}
-                    className="text-[10px] font-semibold text-forest-700 hover:underline"
-                  >
-                    {copiedField === 'email' ? 'Copied' : 'Copy'}
-                  </button>
-                </div>
+        {/* Right Form Card */}
+        <div className="lg:w-1/2 w-full">
+          <div className="bg-white rounded-3xl shadow-xl border border-slate-200 text-slate-900 p-6 sm:p-8">
+            {/* Top Primary 1-Click Action */}
+            <div className="mb-6 pb-6 border-b border-slate-100">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-bold uppercase tracking-wider text-emerald-800">
+                  Seller Demonstration Access
+                </span>
+                <span className="text-[11px] text-slate-500 font-medium">1-Click Fast Portal</span>
               </div>
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-slate-500">Password:</span>
-                <div className="flex items-center gap-1.5">
-                  <code className="font-mono font-semibold text-slate-900">
-                    {DEMO_ACCOUNT_PASSWORD}
-                  </code>
-                  <button
-                    type="button"
-                    onClick={() => handleCopy(DEMO_ACCOUNT_PASSWORD, 'password')}
-                    className="text-[10px] font-semibold text-forest-700 hover:underline"
-                  >
-                    {copiedField === 'password' ? 'Copied' : 'Copy'}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-2">
               <button
                 type="button"
+                onClick={handleInstantDemoSeller}
                 disabled={isSubmitting}
-                onClick={handleUseDemoAccount}
-                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-forest-800 hover:bg-forest-900 text-white shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-forest-700"
+                className="w-full inline-flex items-center justify-center gap-2.5 py-3.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md transition transform active:scale-98"
               >
-                <CheckCircle2 className="w-4 h-4 text-leaf-300" />
-                <span>Use Demo Account (Sign In Now)</span>
-              </button>
-              <button
-                type="button"
-                disabled={isSubmitting}
-                onClick={handleFillOnly}
-                className="px-3 py-2 rounded-xl text-xs font-semibold bg-white hover:bg-forest-100 text-forest-800 border border-forest-300 transition-colors"
-              >
-                Fill Form
+                <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
+                <span>1-Click Demo Seller Sign In & Launch Portal</span>
               </button>
             </div>
-          </div>
 
-          {errorMsg && (
-            <div
-              role="alert"
-              className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 flex items-start gap-2.5 text-xs text-red-800"
-            >
-              <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
-              <span>{errorMsg}</span>
-            </div>
-          )}
-
-          {/* Login Form */}
-          <form onSubmit={handleSubmit} noValidate className="space-y-4">
-            <div>
-              <label
-                htmlFor="login-email"
-                className="block text-xs font-semibold text-slate-800 mb-1.5"
-              >
-                Email Address
-              </label>
-              <div className="relative">
-                <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                <input
-                  id="login-email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    if (fieldErrors.email) setFieldErrors({ ...fieldErrors, email: undefined });
-                  }}
-                  placeholder="farmer.demo@AgriPulse.in"
-                  className={`w-full pl-10 pr-3.5 py-2.5 text-sm rounded-xl border ${
-                    fieldErrors.email
-                      ? 'border-red-400 bg-red-50/30'
-                      : 'border-slate-300 bg-white'
-                  } text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-forest-600`}
-                />
+            {/* Standard Seller Sign In Form */}
+            <form onSubmit={handleSellerLogin} className="space-y-4">
+              <div className="text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                Or Sign In with Seller Credentials
               </div>
-              {fieldErrors.email && (
-                <p className="mt-1 text-xs text-red-600">{fieldErrors.email}</p>
+
+              {errorMsg && (
+                <div className="rounded-xl bg-rose-50 border border-rose-200 p-3.5 flex items-start gap-2.5 text-rose-800 text-xs">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold">Authentication Notice:</span> {errorMsg}
+                  </div>
+                </div>
               )}
-            </div>
 
-            <div>
-              <label
-                htmlFor="login-password"
-                className="block text-xs font-semibold text-slate-800 mb-1.5"
-              >
-                Password
-              </label>
-              <div className="relative">
-                <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                <input
-                  id="login-password"
-                  name="password"
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    if (fieldErrors.password)
-                      setFieldErrors({ ...fieldErrors, password: undefined });
-                  }}
-                  placeholder="Enter your password"
-                  className={`w-full pl-10 pr-10 py-2.5 text-sm rounded-xl border ${
-                    fieldErrors.password
-                      ? 'border-red-400 bg-red-50/30'
-                      : 'border-slate-300 bg-white'
-                  } text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-forest-600`}
-                />
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Business / Seller Email Address
+                </label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3 pointer-events-none" />
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (fieldErrors.email) setFieldErrors({ ...fieldErrors, email: undefined });
+                    }}
+                    placeholder="seller.demo@kisanmart.in"
+                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-300 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                {fieldErrors.email && (
+                  <p className="text-[11px] text-rose-600 mt-1">{fieldErrors.email}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Portal Password
+                </label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3 pointer-events-none" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    value={password}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (fieldErrors.password) {
+                        setFieldErrors({ ...fieldErrors, password: undefined });
+                      }
+                    }}
+                    placeholder="Enter password"
+                    className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-300 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3.5 top-2.5 text-slate-400 hover:text-slate-700"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                {fieldErrors.password && (
+                  <p className="text-[11px] text-rose-600 mt-1">{fieldErrors.password}</p>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between text-xs pt-1">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-slate-300"
+                  />
+                  <span className="text-slate-600">Keep me logged in</span>
+                </label>
                 <button
                   type="button"
-                  onClick={() => setShowPassword((prev) => !prev)}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-500 hover:text-slate-800"
+                  onClick={handleFillSellerDemo}
+                  className="text-emerald-700 hover:text-emerald-800 font-semibold hover:underline"
                 >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  Auto-fill Seller Demo
                 </button>
               </div>
-              {fieldErrors.password && (
-                <p className="mt-1 text-xs text-red-600">{fieldErrors.password}</p>
-              )}
-            </div>
 
-            {/* Remember My Login */}
-            <div className="bg-slate-50 rounded-xl p-3 border border-slate-200/80">
-              <label className="flex items-start gap-2.5 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="mt-0.5 rounded border-slate-300 text-forest-700 focus:ring-forest-600"
-                />
-                <div className="text-xs">
-                  <span className="font-semibold text-slate-800 block">
-                    Remember my login on this browser
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-forest-950 hover:bg-forest-900 text-white font-bold text-sm transition shadow-sm"
+              >
+                <span>{isSubmitting ? 'Accessing Portal...' : 'Sign In to Seller Central'}</span>
+                <ArrowRight className="w-4 h-4 text-emerald-400" />
+              </button>
+            </form>
+
+            {/* Demo Account Credentials Reference Card */}
+            <div className="mt-6 rounded-2xl bg-slate-50 border border-slate-200 p-4 text-xs">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-bold text-slate-900 flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  Default Demonstration Seller Account
+                </span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-semibold">
+                  Pre-configured Co-op
+                </span>
+              </div>
+
+              <div className="space-y-1.5 font-mono text-[11px] text-slate-700">
+                <div className="flex items-center justify-between bg-white px-2.5 py-1.5 rounded-lg border border-slate-200">
+                  <span>
+                    Email:{' '}
+                    <strong className="text-slate-900 font-semibold">{DEMO_SELLER_EMAIL}</strong>
                   </span>
-                  <span className="text-[11px] text-slate-500 block mt-0.5">
-                    Keeps your demo farmer session active across page refreshes and browser restarts until you click Sign Out.
-                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(DEMO_SELLER_EMAIL, 'seller-email')}
+                    className="text-slate-400 hover:text-slate-800 ml-2"
+                  >
+                    {copiedField === 'seller-email' ? (
+                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5" />
+                    )}
+                  </button>
                 </div>
-              </label>
+                <div className="flex items-center justify-between bg-white px-2.5 py-1.5 rounded-lg border border-slate-200">
+                  <span>
+                    Password:{' '}
+                    <strong className="text-slate-900 font-semibold">{DEMO_SELLER_PASSWORD}</strong>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(DEMO_SELLER_PASSWORD, 'seller-password')}
+                    className="text-slate-400 hover:text-slate-800 ml-2"
+                  >
+                    {copiedField === 'seller-password' ? (
+                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5" />
+                    )}
+                  </button>
+                </div>
+              </div>
             </div>
 
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full py-3 px-4 rounded-xl text-sm font-bold bg-forest-900 hover:bg-forest-950 disabled:bg-slate-400 text-white shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-forest-800"
-            >
-              {isSubmitting ? 'Signing in to AgriPulse...' : 'Sign In'}
-            </button>
-          </form>
-
-          {/* Help & Security Distinction Note */}
-          <div className="mt-5 pt-4 border-t border-slate-200 flex items-center justify-between text-xs">
-            <button
-              type="button"
-              onClick={() => setShowHelpModal((prev) => !prev)}
-              className="inline-flex items-center gap-1.5 font-semibold text-forest-800 hover:underline"
-            >
-              <HelpCircle className="w-3.5 h-3.5" />
-              <span>Account access & demo storage help</span>
-            </button>
-            <span className="text-[11px] text-slate-500">v1.0 Demo Ready</span>
+            {/* Bottom Links */}
+            <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+              <Link to="/signup" className="text-emerald-700 font-bold hover:underline">
+                New Agro-Seller? Register Account
+              </Link>
+              <Link to="/farmer/login" className="text-slate-700 font-semibold hover:underline">
+                Farmer Sign In Portal →
+              </Link>
+            </div>
           </div>
-
-          {showHelpModal && (
-            <div className="mt-3 p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 space-y-2">
-              <p className="font-bold text-slate-900">
-                About the AGRIPULSE Demonstration Account:
-              </p>
-              <p>
-                • <strong>Demo Credentials:</strong> Sign in with{' '}
-                <code>{DEMO_ACCOUNT_EMAIL}</code> and <code>{DEMO_ACCOUNT_PASSWORD}</code>.
-              </p>
-              <p>
-                • <strong>Local Persistence:</strong> Your farms, crop records, cart items, and demo orders are saved in this browser&apos;s <code>localStorage</code> and persist across refreshes and logouts.
-              </p>
-              <p>
-                • <strong>Security Note:</strong> The hardcoded demo account is for standalone demonstrations only. Production farmer accounts require a backend authentication provider (such as Supabase Auth) with row-level security.
-              </p>
-            </div>
-          )}
         </div>
-
-        {/* Right Footer Branding */}
-        <footer className="mt-6 text-center text-xs text-slate-500">
-          <p className="font-semibold text-slate-700">
-            AGRIPULSE — Intelligent Farm Digital Twin & Early Crop-Stress Detection System
-          </p>
-          <p className="text-[11px] mt-0.5">
-            Measure. Understand. Predict. Protect. • Built for Indian Farmers
-          </p>
-        </footer>
       </main>
+
+      {/* Footer */}
+      <footer className="text-center py-6 text-xs text-slate-400 border-t border-slate-800 bg-forest-950">
+        © 2026 AgriPulse Agro-Business & Seller Central. Certified Marketplace Platform for
+        Agricultural Input Dealers & Producers.
+      </footer>
     </div>
   );
 };

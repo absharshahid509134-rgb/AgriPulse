@@ -25,13 +25,22 @@ import { AgriPulseLogo } from './AgriPulseLogo';
 import { FloatingAIChat } from './FloatingAIChat';
 import { useAgriPulse } from '../context/AgriPulseContext';
 
+import {
+  Tag,
+  Heart,
+  Store,
+} from 'lucide-react';
+
 const NAV_ITEMS = [
   { to: '/home', label: 'Home', icon: Home },
   { to: '/farm', label: 'Farm', icon: Tractor },
   { to: '/weather', label: 'Weather', icon: CloudSun },
   { to: '/dictionary', label: 'Dictionary', icon: BookOpen },
-  { to: '/disease', label: 'Disease', icon: Stethoscope },
+  { to: '/disease', label: '100 Diseases', icon: BookOpen },
   { to: '/store', label: 'Store', icon: ShoppingBag },
+  { to: '/offers', label: 'Offers', icon: Tag },
+  { to: '/orders', label: 'Orders', icon: Package },
+  { to: '/wishlist', label: 'Wishlist', icon: Heart },
   { to: '/news', label: 'News', icon: Newspaper },
   { to: '/schemes', label: 'Schemes', icon: Landmark },
   { to: '/account', label: 'Account & Settings', icon: UserCog },
@@ -42,10 +51,13 @@ const ROUTE_TITLES: Record<string, { title: string; section: string }> = {
   '/farm': { title: 'Farm & Plot Digital Twin', section: 'Farm Management' },
   '/weather': { title: 'Agro-Meteorological Intelligence', section: 'Weather' },
   '/dictionary': { title: 'Agricultural Learning Dictionary', section: 'Dictionary' },
-  '/disease': { title: 'Crop Disease & Symptom Analysis', section: 'Crop Health' },
-  '/store': { title: 'Agricultural Online Store (Demo)', section: 'Store' },
-  '/cart': { title: 'Shopping Cart & Demo Checkout', section: 'Store / Cart' },
+  '/disease': { title: '100 Crop Diseases Encyclopedia', section: 'Crop Health' },
+  '/store': { title: 'Agricultural Online Store', section: 'Store' },
+  '/cart': { title: 'Shopping Cart & Order Review', section: 'Store / Cart' },
+  '/checkout': { title: 'Simulated Order Checkout', section: 'Store / Checkout' },
   '/orders': { title: 'Demonstration Order History', section: 'Store / Orders' },
+  '/offers': { title: 'Seasonal Vouchers & Promotions', section: 'Store / Offers' },
+  '/wishlist': { title: 'Saved Agricultural Supplies', section: 'Store / Wishlist' },
   '/news': { title: 'Agricultural News & Advisories', section: 'News' },
   '/schemes': { title: 'Government Schemes Discovery', section: 'Schemes' },
   '/account': { title: 'Farmer Profile & Preferences', section: 'Account & Settings' },
@@ -53,6 +65,8 @@ const ROUTE_TITLES: Record<string, { title: string; section: string }> = {
 
 export const AppShell: React.FC = () => {
   const {
+    session,
+    switchPortal,
     profile,
     logout,
     weather,
@@ -294,6 +308,24 @@ export const AppShell: React.FC = () => {
             <span className="text-[10px] text-forest-300">{orders.length}</span>
           </NavLink>
 
+          {/* Direct Link to Seller Portal */}
+          <button
+            type="button"
+            onClick={() => {
+              switchPortal('seller');
+              navigate('/seller');
+            }}
+            className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-emerald-300 hover:bg-forest-900 border border-emerald-500/30 bg-emerald-950/40 transition my-1"
+          >
+            <span className="flex items-center gap-3">
+              <Store className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>Seller Central Hub</span>
+            </span>
+            <span className="text-[9px] uppercase font-extrabold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">
+              Seller
+            </span>
+          </button>
+
           <div className="px-3 pt-4 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-forest-400">
             Account
           </div>
@@ -427,6 +459,20 @@ export const AppShell: React.FC = () => {
                 <span className="text-[10px] font-normal text-slate-600 hidden lg:inline">
                   {weather.district} (Demo)
                 </span>
+              </button>
+
+              {/* Seller Central Switch Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  switchPortal('seller');
+                  navigate('/seller');
+                }}
+                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-forest-950 hover:bg-forest-900 text-emerald-300 hover:text-white border border-forest-800 text-xs font-bold transition shadow-xs"
+                title="Switch to Seller Central Portal"
+              >
+                <Store className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Seller Portal</span>
               </button>
 
               {/* Quick Cart Button */}
@@ -583,6 +629,26 @@ export const AppShell: React.FC = () => {
             </div>
           </div>
         </header>
+
+        {/* Seller Browsing Notice */}
+        {session?.portalType === 'seller' && (
+          <div className="bg-emerald-950 text-emerald-100 px-4 py-2.5 border-b border-emerald-800 text-xs flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Store className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>
+                You are currently browsing the Farmer Portal as{' '}
+                <strong className="text-white">{session.sellerName || 'Agro Seller'}</strong>.
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate('/seller')}
+              className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 font-bold text-[11px] text-white transition shadow-xs whitespace-nowrap"
+            >
+              Return to Seller Central →
+            </button>
+          </div>
+        )}
 
         {/* Page Content */}
         <main className="flex-1 px-4 sm:px-6 py-5 pb-24 lg:pb-10 max-w-7xl w-full mx-auto">

@@ -4,16 +4,47 @@ export type LanguageCode = 'en' | 'hi';
 
 export type UserRole =
   | 'Farmer'
+  | 'Seller'
   | 'Agricultural Expert'
   | 'Extension Officer'
   | 'Platform Administrator';
+
+export type PortalType = 'seller' | 'farmer';
+
+export interface SellerProfile {
+  id: string;
+  businessName: string;
+  tradeName?: string;
+  contactPerson: string;
+  email: string;
+  mobile: string;
+  category: string;
+  gstin: string;
+  licenseNumber?: string;
+  state: string;
+  district: string;
+  city: string;
+  address: string;
+  pincode: string;
+  bankAccountName: string;
+  bankAccountNumber: string;
+  ifscCode: string;
+  isVerified: boolean;
+  isDemoSeller: boolean;
+  rating: number;
+  totalOrders: number;
+  totalRevenuePaise: number;
+  joinedDate: string;
+}
 
 export interface AuthSession {
   version: 'v1';
   userId: string;
   email: string;
-  farmerName: string;
+  farmerName?: string;
+  sellerName?: string;
   role?: UserRole;
+  portalType?: PortalType;
   isDemo: boolean;
   rememberMe: boolean;
   loggedInAt: string;
@@ -324,8 +355,37 @@ export type ProductCategory =
   | 'Farm safety equipment'
   | 'Harvesting and storage supplies';
 
+export interface StoreProductReview {
+  id: string;
+  userName: string;
+  rating: number;
+  title: string;
+  comment: string;
+  date: string;
+  verifiedPurchase: boolean;
+}
+
+export interface StoreProductFaq {
+  question: string;
+  answer: string;
+}
+
+export interface StoreProductSpecification {
+  label: string;
+  value: string;
+}
+
+export interface StoreProductOffer {
+  code: string;
+  title: string;
+  discountText: string;
+  minOrderPaise?: number;
+}
+
 export interface StoreProduct {
   id: string;
+  slug?: string;
+  sku?: string;
   name: string;
   category: ProductCategory;
   brand: string;
@@ -351,6 +411,33 @@ export interface StoreProduct {
   shippingEstimateDays: string;
   imageSvgType: string;
   imageUrl?: string;
+  rating?: number;
+  reviewCount?: number;
+  gallery?: string[];
+  highlights?: string[];
+  specifications?: StoreProductSpecification[];
+  manufacturer?: {
+    name: string;
+    originCountry: string;
+    address?: string;
+    supportContact?: string;
+  };
+  seller?: {
+    name: string;
+    businessType: string;
+    returnPolicy: string;
+    sellerRating: number;
+  };
+  warranty?: {
+    durationMonths: number;
+    warrantyType: string;
+    coverage: string;
+    claimProcedure: string;
+  };
+  reviews?: StoreProductReview[];
+  faqs?: StoreProductFaq[];
+  relatedProductIds?: string[];
+  offers?: StoreProductOffer[];
 }
 
 export interface CartItem {

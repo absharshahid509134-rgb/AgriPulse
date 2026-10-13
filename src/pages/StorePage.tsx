@@ -174,10 +174,8 @@ export const StorePage: React.FC = () => {
   }, [recentProducts, products]);
 
   const openProductDetail = (prod: StoreProduct) => {
-    setActiveProduct(prod);
-    setDetailQty(1);
     recordProductView(prod.id);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    navigate(`/store/product/${prod.id}`);
   };
 
   const handleAddToCartClick = (prod: StoreProduct, qty = 1) => {

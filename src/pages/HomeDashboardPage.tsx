@@ -16,6 +16,7 @@ import {
   Tractor,
   Sprout,
   CloudSun,
+  BookOpen,
   Stethoscope,
   CalendarCheck,
   MapPin,
@@ -205,9 +206,9 @@ export const HomeDashboardPage: React.FC = () => {
         id: `alert-dis-${openReport.id}`,
         priority: 'High',
         title: `Crop Inspection Due: ${openReport.cropName} in ${openReport.plotName}`,
-        explanation: `Symptom report (${openReport.symptomCategories.join(', ')}) marked "${openReport.status}" (${openReport.analysisMode}).`,
+        explanation: `Field note for ${openReport.cropName} marked "${openReport.status}".`,
         dateLabel: formatDate(openReport.createdAt),
-        actionLabel: 'Review Symptom Report',
+        actionLabel: 'Browse Disease Index',
         route: '/disease',
       });
     }
@@ -456,11 +457,11 @@ export const HomeDashboardPage: React.FC = () => {
             onClick={() => navigate('/disease')}
             className="flex items-center gap-2 p-3 rounded-xl bg-white hover:bg-forest-50 border border-slate-200 hover:border-forest-300 text-left transition-all shadow-sm"
           >
-            <div className="p-2 rounded-lg bg-amber-100 text-amber-800">
-              <Stethoscope className="w-4 h-4" />
+            <div className="p-2 rounded-lg bg-emerald-100 text-emerald-800">
+              <BookOpen className="w-4 h-4" />
             </div>
             <span className="text-xs font-bold text-slate-800 leading-tight">
-              Check Symptoms
+              100 Diseases
             </span>
           </button>
 
@@ -587,25 +588,24 @@ export const HomeDashboardPage: React.FC = () => {
           </p>
         </div>
 
-        {/* Card 5: Latest Crop-Health Assessment */}
-        <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-sm flex flex-col justify-between">
+        {/* Card 5: Crop Disease Encyclopedia */}
+        <div
+          onClick={() => navigate('/disease')}
+          className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-sm flex flex-col justify-between cursor-pointer hover:border-forest-300 transition-colors"
+        >
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-              Latest Health Check
+              Crop Diseases
             </span>
-            <Stethoscope className="w-4 h-4 text-amber-600" />
+            <BookOpen className="w-4 h-4 text-emerald-600" />
           </div>
           <div className="my-2">
             <span className="text-sm font-bold text-slate-900 block truncate">
-              {latestDiseaseReport
-                ? `${latestDiseaseReport.cropName} (${latestDiseaseReport.status})`
-                : 'No Reports Logged'}
+              100 Crop Diseases
             </span>
           </div>
           <p className="text-[11px] text-slate-500">
-            {latestDiseaseReport
-              ? `${latestDiseaseReport.analysisMode}`
-              : 'Submit symptoms in Disease tab'}
+            Scientific pathology index & IDM guide
           </p>
         </div>
 
@@ -762,7 +762,7 @@ export const HomeDashboardPage: React.FC = () => {
                 <p className="text-[11px] text-slate-500 mt-1 truncate">
                   {latestDiseaseReport
                     ? latestDiseaseReport.analysisMode
-                    : 'No symptom reports filed'}
+                    : '100 crop diseases indexed'}
                 </p>
               </div>
 

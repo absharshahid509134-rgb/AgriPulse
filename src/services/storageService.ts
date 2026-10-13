@@ -12,11 +12,13 @@ import {
   FarmPlot,
   FieldObservation,
   RainfallLog,
+  SellerProfile,
   StoreProduct,
   WeatherSnapshot,
 } from '../types';
 import {
   DEMO_FARMER_PROFILE,
+  DEMO_SELLER_PROFILE,
   SEED_ACTIVITIES,
   SEED_CROPS,
   SEED_DISEASE_REPORTS,
@@ -26,12 +28,13 @@ import {
   SEED_RAINFALL_LOGS,
   SEED_WEATHER_SNAPSHOT,
 } from '../data/seedFarmData';
-import { SEED_STORE_PRODUCTS } from '../data/seedProducts';
+import { ENRICHED_STORE_PRODUCTS } from '../data/seedProducts';
 import { SEED_DEMO_ORDERS } from '../data/seedNewsAndSchemes';
 
 export const STORAGE_KEYS = {
   SESSION: 'AgriPulse:v1:session',
   PROFILE: 'AgriPulse:v1:profile',
+  SELLER_PROFILE: 'AgriPulse:v1:sellerProfile',
   FARMS: 'AgriPulse:v1:farms',
   PLOTS: 'AgriPulse:v1:plots',
   CROPS: 'AgriPulse:v1:crops',
@@ -105,13 +108,13 @@ export const INITIAL_CHAT_MESSAGES: ChatMessage[] = [
   {
     id: 'msg-welcome-01',
     sender: 'assistant',
-    text: 'Namaste! I am AGRIPULSE AI (running in Demo Rule-Based Guidance mode). I have access to your saved farms in Karnal & Kurukshetra, your 5 active crop records, field observations, 7-day weather forecast, 52-term agricultural dictionary, store catalog, and government schemes. How can I help you today?',
+    text: 'Namaste! I am AGRISENSE AI (running in Farm Digital Twin Guidance mode). I have access to your saved farms, active crop records, field observations, 7-day weather forecast, 52-term agricultural dictionary, store catalog, and government schemes. How can I help you today?',
     timestamp: '2026-10-13T06:00:00.000Z',
     modeLabel: 'Demo Rule-Based Guidance',
     suggestedLinks: [
       { label: 'View Farm Plots', route: '/farm' },
-      { label: 'Check Weather Forecast', route: '/weather' },
-      { label: 'Inspect Crop Symptoms', route: '/disease' },
+      { label: 'Browse Agricultural Store', route: '/store' },
+      { label: 'Check Crop Health', route: '/disease' },
     ],
   },
 ];
@@ -133,6 +136,11 @@ export function loadInitialDataSnapshot() {
     STORAGE_KEYS.PROFILE,
     DEMO_FARMER_PROFILE,
     (v): v is FarmerProfile => isObject<FarmerProfile>(v) && typeof (v as FarmerProfile).name === 'string'
+  );
+  const sellerProfile = safeReadStorage<SellerProfile>(
+    STORAGE_KEYS.SELLER_PROFILE,
+    DEMO_SELLER_PROFILE,
+    (v): v is SellerProfile => isObject<SellerProfile>(v) && typeof (v as SellerProfile).businessName === 'string'
   );
   const farms = safeReadStorage<Farm[]>(STORAGE_KEYS.FARMS, SEED_FARMS, isArray);
   const plots = safeReadStorage<FarmPlot[]>(STORAGE_KEYS.PLOTS, SEED_PLOTS, isArray);
@@ -171,7 +179,7 @@ export function loadInitialDataSnapshot() {
   );
   const products = safeReadStorage<StoreProduct[]>(
     STORAGE_KEYS.PRODUCTS,
-    SEED_STORE_PRODUCTS,
+    ENRICHED_STORE_PRODUCTS,
     (v): v is StoreProduct[] => Array.isArray(v) && v.length >= 24
   );
   const cart = safeReadStorage<CartItem[]>(
@@ -215,6 +223,7 @@ export function loadInitialDataSnapshot() {
 
   return {
     profile,
+    sellerProfile,
     farms,
     plots,
     crops,
@@ -270,6 +279,7 @@ export function writeAuthSession(session: AuthSession | null): void {
 
 export function resetAllDemoDataToSeed(): void {
   safeWriteStorage(STORAGE_KEYS.PROFILE, DEMO_FARMER_PROFILE);
+  safeWriteStorage(STORAGE_KEYS.SELLER_PROFILE, DEMO_SELLER_PROFILE);
   safeWriteStorage(STORAGE_KEYS.FARMS, SEED_FARMS);
   safeWriteStorage(STORAGE_KEYS.PLOTS, SEED_PLOTS);
   safeWriteStorage(STORAGE_KEYS.CROPS, SEED_CROPS);
@@ -280,7 +290,7 @@ export function resetAllDemoDataToSeed(): void {
   safeWriteStorage(STORAGE_KEYS.DISEASE_REPORTS, SEED_DISEASE_REPORTS);
   safeWriteStorage(STORAGE_KEYS.DICT_BOOKMARKS, ['dict-06', 'dict-18', 'dict-30', 'dict-50']);
   safeWriteStorage(STORAGE_KEYS.DICT_RECENT, ['dict-51', 'dict-18', 'dict-28']);
-  safeWriteStorage(STORAGE_KEYS.PRODUCTS, SEED_STORE_PRODUCTS);
+  safeWriteStorage(STORAGE_KEYS.PRODUCTS, ENRICHED_STORE_PRODUCTS);
   safeWriteStorage(STORAGE_KEYS.CART, [
     {
       productId: 'prod-201',

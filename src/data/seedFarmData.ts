@@ -7,8 +7,35 @@ import {
   FarmPlot,
   FieldObservation,
   RainfallLog,
+  SellerProfile,
   WeatherSnapshot,
 } from '../types';
+
+export const DEMO_SELLER_PROFILE: SellerProfile = {
+  id: 'seller-demo-001',
+  businessName: 'Karnal Kisan Agro Cooperative (Demo Seller)',
+  tradeName: 'Karnal Agro Inputs & Seeds Mart',
+  contactPerson: 'Rajesh Kumar Sharma',
+  email: 'seller.demo@kisanmart.in',
+  mobile: '+91 94160 22345',
+  category: 'Seeds, Fertilizers & Crop Care',
+  gstin: '06AAACK1234F1Z8',
+  licenseNumber: 'AGRI/HR/KNL/2024/7829',
+  state: 'Haryana',
+  district: 'Karnal',
+  city: 'Karnal',
+  address: 'Plot 42, Mandi Complex, GT Road, Karnal',
+  pincode: '132001',
+  bankAccountName: 'Karnal Kisan Agro Co-op Current A/C',
+  bankAccountNumber: '918230045612',
+  ifscCode: 'SBIN0001234',
+  isVerified: true,
+  isDemoSeller: true,
+  rating: 4.8,
+  totalOrders: 14,
+  totalRevenuePaise: 34285000, // ₹3,42,850
+  joinedDate: '2025-06-10',
+};
 
 export const DEMO_FARMER_PROFILE: FarmerProfile = {
   id: 'farmer-demo-001',

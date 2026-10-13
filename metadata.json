@@ -1,0 +1,7 @@
+{
+  "name": "AGRISENSE",
+  "description": "AGRISENSE — Intelligent Farm Digital Twin & Early Crop-Stress Detection System. Measure. Understand. Predict. Protect.",
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

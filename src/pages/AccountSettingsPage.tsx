@@ -385,7 +385,7 @@ export const AccountSettingsPage: React.FC = () => {
               },
               {
                 key: 'cropInspectionAlerts' as const,
-                label: 'Crop Health & Symptom Scouting Alerts',
+                label: 'Crop Health & Plant Pathology Advisories',
               },
               {
                 key: 'orderUpdates' as const,
@@ -455,7 +455,7 @@ export const AccountSettingsPage: React.FC = () => {
                 <span>What Local Demo Data is Stored in Your Browser?</span>
               </p>
               <p className="text-[11px] leading-relaxed">
-                AgriPulse stores versioned keys (<code>AgriPulse:v1:*</code>) in this browser&apos;s{' '}
+                AgriSense stores versioned keys (<code>AgriPulse:v1:*</code>) in this browser&apos;s{' '}
                 <code>localStorage</code> for your demo session, farms, plots, crop records, observations, activities, cart, wishlist, and demo orders. Note: Browser <code>localStorage</code> does not sync across different devices or separate browsers until connected to a shared database such as Supabase.
               </p>
             </div>

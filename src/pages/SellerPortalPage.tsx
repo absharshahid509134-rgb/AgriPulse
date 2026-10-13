@@ -1,0 +1,1377 @@
+import React, { useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import {
+  Store,
+  Package,
+  TrendingUp,
+  Truck,
+  Plus,
+  Search,
+  Filter,
+  CheckCircle2,
+  Clock,
+  AlertCircle,
+  Building2,
+  DollarSign,
+  FileText,
+  Printer,
+  X,
+  ExternalLink,
+  ChevronRight,
+  ShieldCheck,
+  Star,
+  Users,
+  Sprout,
+  LogOut,
+  Edit,
+  Trash2,
+  Sparkles,
+  ArrowUpRight,
+  RefreshCw,
+  Eye,
+  Check,
+} from 'lucide-react';
+import { AgriPulseLogo } from '../components/AgriPulseLogo';
+import { useAgriPulse } from '../context/AgriPulseContext';
+import { DemoOrder, OrderStatus, ProductCategory, StoreProduct } from '../types';
+
+const PRODUCT_CATEGORIES: ProductCategory[] = [
+  'Seeds and planting material',
+  'Crop nutrition and fertilizers',
+  'Crop protection and bio-inputs',
+  'Farm machinery and implements',
+  'Micro-irrigation and hardware',
+  'Precision testing instruments',
+  'Farm safety and protective equipment',
+];
+
+export const SellerPortalPage: React.FC = () => {
+  const {
+    session,
+    sellerProfile,
+    updateSellerProfile,
+    products,
+    addProduct,
+    updateProduct,
+    deleteProduct,
+    orders,
+    updateOrderStatus,
+    switchPortal,
+    logout,
+  } = useAgriPulse();
+
+  const navigate = useNavigate();
+
+  const [activeTab, setActiveTab] = useState<'overview' | 'catalog' | 'orders' | 'payouts' | 'settings'>('overview');
+  const [catalogFilter, setCatalogFilter] = useState<'mine' | 'all'>('mine');
+  const [catalogCategory, setCatalogCategory] = useState<string>('All');
+  const [catalogSearch, setCatalogSearch] = useState('');
+
+  // Add Product Modal State
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newProdName, setNewProdName] = useState('');
+  const [newProdCategory, setNewProdCategory] = useState<ProductCategory>('Seeds and planting material');
+  const [newProdBrand, setNewProdBrand] = useState('Karnal Kisan Agro (Co-op)');
+  const [newProdPackSize, setNewProdPackSize] = useState('40 kg Bag');
+  const [newProdPriceRs, setNewProdPriceRs] = useState('1450');
+  const [newProdMrpRs, setNewProdMrpRs] = useState('1650');
+  const [newProdStock, setNewProdStock] = useState('50');
+  const [newProdShortDesc, setNewProdShortDesc] = useState('');
+  const [newProdUsage, setNewProdUsage] = useState('');
+  const [newProdSvgType, setNewProdSvgType] = useState('seeds-wheat');
+
+  // Invoice Modal State
+  const [invoiceOrder, setInvoiceOrder] = useState<DemoOrder | null>(null);
+
+  // Status Filter for Orders Tab
+  const [orderStatusFilter, setOrderStatusFilter] = useState<string>('All');
+
+  // Filtered Products
+  const displayedProducts = useMemo(() => {
+    return products.filter((p) => {
+      const isMine =
+        p.sellerName.toLowerCase().includes('karnal') ||
+        p.sellerName.toLowerCase().includes(sellerProfile.businessName.toLowerCase()) ||
+        p.seller?.name?.toLowerCase().includes('karnal');
+
+      if (catalogFilter === 'mine' && !isMine) {
+        return false;
+      }
+      if (catalogCategory !== 'All' && p.category !== catalogCategory) {
+        return false;
+      }
+      if (catalogSearch.trim()) {
+        const query = catalogSearch.toLowerCase();
+        const matchesName = p.name.toLowerCase().includes(query);
+        const matchesBrand = p.brand.toLowerCase().includes(query);
+        const matchesCategory = p.category.toLowerCase().includes(query);
+        if (!matchesName && !matchesBrand && !matchesCategory) return false;
+      }
+      return true;
+    });
+  }, [products, catalogFilter, catalogCategory, catalogSearch, sellerProfile.businessName]);
+
+  // Orders statistics
+  const pendingOrdersCount = useMemo(
+    () => orders.filter((o) => o.orderStatus === 'Placed' || o.orderStatus === 'Processing').length,
+    [orders]
+  );
+
+  const completedOrdersCount = useMemo(
+    () => orders.filter((o) => o.orderStatus === 'Delivered').length,
+    [orders]
+  );
+
+  const myListedProductsCount = useMemo(() => {
+    return products.filter(
+      (p) =>
+        p.sellerName.toLowerCase().includes('karnal') ||
+        p.sellerName.toLowerCase().includes(sellerProfile.businessName.toLowerCase())
+    ).length;
+  }, [products, sellerProfile.businessName]);
+
+  const filteredOrders = useMemo(() => {
+    if (orderStatusFilter === 'All') return orders;
+    return orders.filter((o) => o.orderStatus === orderStatusFilter);
+  }, [orders, orderStatusFilter]);
+
+  const handleSwitchToFarmerPortal = () => {
+    switchPortal('farmer');
+    navigate('/home');
+  };
+
+  const handleCreateProduct = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newProdName.trim()) return;
+
+    const pricePaise = Math.round(parseFloat(newProdPriceRs || '0') * 100);
+    const mrpPaise = Math.round(parseFloat(newProdMrpRs || '0') * 100);
+    const stockCount = parseInt(newProdStock || '10', 10);
+
+    addProduct({
+      name: newProdName.trim(),
+      category: newProdCategory,
+      brand: newProdBrand.trim(),
+      packSize: newProdPackSize.trim(),
+      pricePaise,
+      mrpPaise,
+      stockCount,
+      availability: stockCount > 0 ? 'In Stock' : 'Out of Stock',
+      sellerName: `${sellerProfile.businessName} (Demo Seller)`,
+      shortDescription:
+        newProdShortDesc.trim() ||
+        `High-quality certified ${newProdName.trim()} supplied by ${sellerProfile.businessName}.`,
+      detailedDescription:
+        newProdShortDesc.trim() ||
+        `Direct dispatch from ${sellerProfile.businessName} warehouse. Tested for purity and compliance with certified germination guidelines.`,
+      usageInstructions:
+        newProdUsage.trim() || 'Follow recommended agronomic package of practices for optimal crop emergence.',
+      storageInstructions: 'Store in a dry, rodent-safe godown on raised wooden pallets.',
+      shippingEstimateDays: 'Estimated 2–4 days (Demo Delivery)',
+      imageSvgType: newProdSvgType,
+      isFeatured: false,
+      isPopular: true,
+      isNewArrival: true,
+      rating: 4.8,
+      reviewCount: 12,
+    });
+
+    setShowAddModal(false);
+    // Reset inputs
+    setNewProdName('');
+    setNewProdShortDesc('');
+    setNewProdUsage('');
+  };
+
+  const handleQuickStock = (productId: string, delta: number) => {
+    const prod = products.find((p) => p.id === productId);
+    if (!prod) return;
+    const newStock = Math.max(0, prod.stockCount + delta);
+    updateProduct({
+      ...prod,
+      stockCount: newStock,
+      availability: newStock > 0 ? 'In Stock' : 'Out of Stock',
+    });
+  };
+
+  const handleToggleStock = (productId: string) => {
+    const prod = products.find((p) => p.id === productId);
+    if (!prod) return;
+    const isOut = prod.availability === 'Out of Stock';
+    updateProduct({
+      ...prod,
+      availability: isOut ? 'In Stock' : 'Out of Stock',
+      stockCount: isOut ? Math.max(10, prod.stockCount) : 0,
+    });
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-100 flex flex-col text-slate-900">
+      {/* Top Banner Navigation */}
+      <header className="bg-forest-950 text-white sticky top-0 z-30 shadow-md border-b border-forest-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+          {/* Logo & Seller Hub Title */}
+          <div className="flex items-center gap-3">
+            <AgriPulseLogo size="md" theme="light" />
+            <div className="hidden sm:block border-l border-forest-800 pl-3">
+              <div className="flex items-center gap-2">
+                <span className="font-extrabold text-sm tracking-tight text-white">
+                  Seller Central Hub
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  Live Vendor Portal
+                </span>
+              </div>
+              <p className="text-[11px] text-forest-300 truncate max-w-xs">
+                {sellerProfile.businessName}
+              </p>
+            </div>
+          </div>
+
+          {/* Quick Actions / Portal Switcher */}
+          <div className="flex items-center gap-2 sm:gap-3 text-xs">
+            <Link
+              to="/store"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-forest-900 hover:bg-forest-800 text-forest-200 hover:text-white border border-forest-700 transition"
+              title="See how products appear in the farmer store catalog"
+            >
+              <Eye className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="hidden md:inline">Preview Farmer Store</span>
+            </Link>
+
+            <button
+              type="button"
+              onClick={handleSwitchToFarmerPortal}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-leaf-600 hover:bg-leaf-500 text-white font-semibold transition shadow-sm"
+              title="Open Farmer Dashboard & Digital Twin"
+            >
+              <Sprout className="w-3.5 h-3.5 text-amber-300" />
+              <span>Switch to Farmer Portal</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                logout();
+                navigate('/login');
+              }}
+              className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-forest-900 hover:bg-rose-900/50 text-forest-300 hover:text-rose-200 border border-forest-800 transition"
+              title="Sign Out"
+            >
+              <LogOut className="w-4 h-4 sm:hidden" />
+              <span className="hidden sm:inline">Sign Out</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Tab Navigation Bar */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex overflow-x-auto border-t border-forest-900 scrollbar-none">
+          <button
+            type="button"
+            onClick={() => setActiveTab('overview')}
+            className={`px-4 py-3 text-xs font-bold whitespace-nowrap border-b-2 transition flex items-center gap-2 ${
+              activeTab === 'overview'
+                ? 'border-emerald-400 text-emerald-300 bg-forest-900/50'
+                : 'border-transparent text-forest-300 hover:text-white'
+            }`}
+          >
+            <TrendingUp className="w-4 h-4" />
+            <span>Dashboard Overview</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('catalog')}
+            className={`px-4 py-3 text-xs font-bold whitespace-nowrap border-b-2 transition flex items-center gap-2 ${
+              activeTab === 'catalog'
+                ? 'border-emerald-400 text-emerald-300 bg-forest-900/50'
+                : 'border-transparent text-forest-300 hover:text-white'
+            }`}
+          >
+            <Package className="w-4 h-4" />
+            <span>Catalog & Inventory ({myListedProductsCount})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('orders')}
+            className={`px-4 py-3 text-xs font-bold whitespace-nowrap border-b-2 transition flex items-center gap-2 ${
+              activeTab === 'orders'
+                ? 'border-emerald-400 text-emerald-300 bg-forest-900/50'
+                : 'border-transparent text-forest-300 hover:text-white'
+            }`}
+          >
+            <Truck className="w-4 h-4" />
+            <span>Farmer Orders ({orders.length})</span>
+            {pendingOrdersCount > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-500 text-slate-950 font-extrabold">
+                {pendingOrdersCount}
+              </span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('payouts')}
+            className={`px-4 py-3 text-xs font-bold whitespace-nowrap border-b-2 transition flex items-center gap-2 ${
+              activeTab === 'payouts'
+                ? 'border-emerald-400 text-emerald-300 bg-forest-900/50'
+                : 'border-transparent text-forest-300 hover:text-white'
+            }`}
+          >
+            <DollarSign className="w-4 h-4" />
+            <span>Financials & Payouts</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('settings')}
+            className={`px-4 py-3 text-xs font-bold whitespace-nowrap border-b-2 transition flex items-center gap-2 ${
+              activeTab === 'settings'
+                ? 'border-emerald-400 text-emerald-300 bg-forest-900/50'
+                : 'border-transparent text-forest-300 hover:text-white'
+            }`}
+          >
+            <Building2 className="w-4 h-4" />
+            <span>Store Profile & GSTIN</span>
+          </button>
+        </div>
+      </header>
+
+      {/* Main Workspace */}
+      <main className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 flex-1 space-y-6">
+        {/* Verification & Seller Callout Banner */}
+        <div className="rounded-2xl bg-white border border-slate-200 p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
+              <Store className="w-6 h-6 text-emerald-700" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-base font-bold text-slate-900">
+                  {sellerProfile.businessName}
+                </h1>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                  <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                  Verified Mandi Dealer
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                GSTIN: <span className="font-mono font-semibold text-slate-700">{sellerProfile.gstin}</span> •{' '}
+                Mandi Yard: {sellerProfile.city}, {sellerProfile.state} • Primary Category: {sellerProfile.category}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-xs font-bold text-amber-900">
+              <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+              <span>4.8 / 5.0 Seller Rating (148 Reviews)</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowAddModal(true)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add New Product</span>
+            </button>
+          </div>
+        </div>
+
+        {/* TAB 1: OVERVIEW */}
+        {activeTab === 'overview' && (
+          <div className="space-y-6">
+            {/* KPI Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="rounded-2xl bg-white border border-slate-200 p-5 shadow-xs">
+                <div className="flex items-center justify-between text-slate-500 mb-2">
+                  <span className="text-xs font-semibold uppercase tracking-wider">Total Sales GMV</span>
+                  <DollarSign className="w-4 h-4 text-emerald-600" />
+                </div>
+                <div className="text-2xl font-extrabold text-slate-900">₹3,42,850</div>
+                <div className="mt-1 flex items-center gap-1 text-[11px] text-emerald-700 font-bold">
+                  <ArrowUpRight className="w-3.5 h-3.5" />
+                  <span>+18.4% this Rabi Season</span>
+                </div>
+              </div>
+
+              <div className="rounded-2xl bg-white border border-slate-200 p-5 shadow-xs">
+                <div className="flex items-center justify-between text-slate-500 mb-2">
+                  <span className="text-xs font-semibold uppercase tracking-wider">Farmer Orders</span>
+                  <Truck className="w-4 h-4 text-emerald-600" />
+                </div>
+                <div className="text-2xl font-extrabold text-slate-900">{orders.length} Orders</div>
+                <div className="mt-1 text-[11px] text-slate-500">
+                  <strong className="text-amber-700 font-bold">{pendingOrdersCount} awaiting dispatch</strong> • {completedOrdersCount} delivered
+                </div>
+              </div>
+
+              <div className="rounded-2xl bg-white border border-slate-200 p-5 shadow-xs">
+                <div className="flex items-center justify-between text-slate-500 mb-2">
+                  <span className="text-xs font-semibold uppercase tracking-wider">Active Catalog SKUs</span>
+                  <Package className="w-4 h-4 text-emerald-600" />
+                </div>
+                <div className="text-2xl font-extrabold text-slate-900">{myListedProductsCount} Live SKUs</div>
+                <div className="mt-1 text-[11px] text-slate-500">
+                  Seeds, Fertilizer lots, Spray equipment
+                </div>
+              </div>
+
+              <div className="rounded-2xl bg-white border border-slate-200 p-5 shadow-xs">
+                <div className="flex items-center justify-between text-slate-500 mb-2">
+                  <span className="text-xs font-semibold uppercase tracking-wider">Fulfillment Rate</span>
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                </div>
+                <div className="text-2xl font-extrabold text-slate-900">99.2%</div>
+                <div className="mt-1 text-[11px] text-emerald-700 font-medium">
+                  Average dispatch within 1.8 business days
+                </div>
+              </div>
+            </div>
+
+            {/* Attention Alert for Pending Orders */}
+            {pendingOrdersCount > 0 && (
+              <div className="rounded-2xl bg-amber-50 border border-amber-200 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-start sm:items-center gap-3">
+                  <AlertCircle className="w-5 h-5 text-amber-700 shrink-0 mt-0.5 sm:mt-0" />
+                  <div>
+                    <h2 className="text-xs font-bold text-amber-950">
+                      Action Required: {pendingOrdersCount} Incoming Farmer Order{pendingOrdersCount > 1 ? 's' : ''} Ready for Dispatch
+                    </h2>
+                    <p className="text-[11px] text-amber-800">
+                      Pack items and assign shipping tracking IDs to avoid harvest sowing delays for farmers.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('orders')}
+                  className="px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition shadow-xs whitespace-nowrap self-start sm:self-center"
+                >
+                  Process Orders Now →
+                </button>
+              </div>
+            )}
+
+            {/* Recent Orders Overview */}
+            <div className="rounded-2xl bg-white border border-slate-200 shadow-xs overflow-hidden">
+              <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">
+                <div>
+                  <h2 className="text-sm font-bold text-slate-900">Recent Farmer Orders</h2>
+                  <p className="text-xs text-slate-500">
+                    Live orders received through the AgriPulse marketplace
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('orders')}
+                  className="text-xs font-bold text-emerald-700 hover:underline flex items-center gap-1"
+                >
+                  View All Orders ({orders.length}) <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs text-slate-700">
+                  <thead className="bg-slate-50 text-[11px] font-semibold text-slate-500 border-b border-slate-200">
+                    <tr>
+                      <th className="py-3 px-4">Order ID & Date</th>
+                      <th className="py-3 px-4">Farmer Customer</th>
+                      <th className="py-3 px-4">Items Ordered</th>
+                      <th className="py-3 px-4">Total Amount</th>
+                      <th className="py-3 px-4">Status</th>
+                      <th className="py-3 px-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {orders.slice(0, 5).map((order) => (
+                      <tr key={order.id} className="hover:bg-slate-50/80 transition">
+                        <td className="py-3 px-4 font-mono font-medium text-slate-900">
+                          <div>{order.id}</div>
+                          <div className="text-[10px] text-slate-400 font-sans">
+                            {new Date(order.createdAt).toLocaleDateString()}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="font-semibold text-slate-900">
+                            {order.deliveryDetails.customerName}
+                          </div>
+                          <div className="text-[11px] text-slate-500">
+                            {order.deliveryDetails.village}, {order.deliveryDetails.district}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="truncate max-w-xs text-slate-800 font-medium">
+                            {order.items.map((i) => `${i.productName} (x${i.quantity})`).join(', ')}
+                          </div>
+                          <div className="text-[10px] text-slate-400">
+                            {order.items.length} unique line item{order.items.length > 1 ? 's' : ''}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 font-bold text-slate-900">
+                          ₹{(order.totalPayablePaise / 100).toLocaleString('en-IN')}
+                          <div className="text-[10px] text-slate-400 font-normal">
+                            {order.paymentMode.includes('UPI') ? 'UPI Paid' : 'Cash on Delivery'}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span
+                            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                              order.orderStatus === 'Delivered'
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : order.orderStatus === 'Dispatched'
+                                ? 'bg-sky-100 text-sky-800'
+                                : order.orderStatus === 'Processing'
+                                ? 'bg-indigo-100 text-indigo-800'
+                                : 'bg-amber-100 text-amber-800'
+                            }`}
+                          >
+                            {order.orderStatus}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <button
+                            type="button"
+                            onClick={() => setInvoiceOrder(order)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-[11px] transition mr-2"
+                          >
+                            <FileText className="w-3 h-3 text-slate-500" />
+                            Invoice
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 2: CATALOG & INVENTORY */}
+        {activeTab === 'catalog' && (
+          <div className="space-y-6">
+            {/* Catalog Toolbar */}
+            <div className="rounded-2xl bg-white border border-slate-200 p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setCatalogFilter('mine')}
+                    className={`px-3 py-1.5 rounded-lg font-bold transition ${
+                      catalogFilter === 'mine'
+                        ? 'bg-white text-slate-900 shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    My Store Products ({myListedProductsCount})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCatalogFilter('all')}
+                    className={`px-3 py-1.5 rounded-lg font-bold transition ${
+                      catalogFilter === 'all'
+                        ? 'bg-white text-slate-900 shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    All Marketplace ({products.length})
+                  </button>
+                </div>
+
+                <select
+                  value={catalogCategory}
+                  onChange={(e) => setCatalogCategory(e.target.value)}
+                  className="px-3 py-1.5 rounded-xl border border-slate-300 text-xs font-medium text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                >
+                  <option value="All">All Categories</option>
+                  {PRODUCT_CATEGORIES.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="relative flex-1 sm:w-64">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={catalogSearch}
+                    onChange={(e) => setCatalogSearch(e.target.value)}
+                    placeholder="Search by name, brand, SKU..."
+                    className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-slate-300 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(true)}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition whitespace-nowrap"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add Product</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Catalog Grid / List */}
+            <div className="rounded-2xl bg-white border border-slate-200 shadow-xs overflow-hidden">
+              <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-900">
+                  Showing {displayedProducts.length} product listing{displayedProducts.length === 1 ? '' : 's'}
+                </span>
+                <span className="text-[11px] text-slate-500">
+                  Changes sync immediately with the live Farmer Store
+                </span>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs text-slate-700">
+                  <thead className="bg-slate-50 text-[11px] font-semibold text-slate-500 border-b border-slate-200">
+                    <tr>
+                      <th className="py-3 px-4">Product Details</th>
+                      <th className="py-3 px-4">Category</th>
+                      <th className="py-3 px-4">Price (₹)</th>
+                      <th className="py-3 px-4">Inventory Stock</th>
+                      <th className="py-3 px-4">Status</th>
+                      <th className="py-3 px-4 text-right">Inventory Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {displayedProducts.map((prod) => (
+                      <tr key={prod.id} className="hover:bg-slate-50/80 transition">
+                        <td className="py-3.5 px-4">
+                          <div className="font-bold text-slate-900 text-sm">{prod.name}</div>
+                          <div className="text-[11px] text-slate-500 mt-0.5">
+                            {prod.brand} • Pack: <span className="font-semibold">{prod.packSize}</span>
+                          </div>
+                          <div className="text-[10px] text-emerald-800 font-medium">
+                            Seller: {prod.sellerName}
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-4 text-slate-600">
+                          <span className="inline-block px-2 py-0.5 rounded-md bg-slate-100 text-[11px] font-medium">
+                            {prod.category}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <div className="font-bold text-slate-900 text-sm">
+                            ₹{(prod.pricePaise / 100).toLocaleString('en-IN')}
+                          </div>
+                          {prod.mrpPaise > prod.pricePaise && (
+                            <div className="text-[10px] text-slate-400 line-through">
+                              ₹{(prod.mrpPaise / 100).toLocaleString('en-IN')}
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`font-bold ${
+                                prod.stockCount <= 5 ? 'text-rose-600 font-extrabold' : 'text-slate-800'
+                              }`}
+                            >
+                              {prod.stockCount} units
+                            </span>
+                            <div className="inline-flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => handleQuickStock(prod.id, -5)}
+                                title="Decrease stock by 5"
+                                className="w-5 h-5 rounded bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold flex items-center justify-center text-[10px]"
+                              >
+                                -5
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleQuickStock(prod.id, 5)}
+                                title="Increase stock by 5"
+                                className="w-5 h-5 rounded bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold flex items-center justify-center text-[10px]"
+                              >
+                                +5
+                              </button>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleStock(prod.id)}
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold cursor-pointer transition ${
+                              prod.availability === 'In Stock' && prod.stockCount > 0
+                                ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
+                                : 'bg-rose-100 text-rose-800 hover:bg-rose-200'
+                            }`}
+                          >
+                            {prod.availability === 'In Stock' && prod.stockCount > 0
+                              ? '● In Stock'
+                              : '○ Out of Stock'}
+                          </button>
+                        </td>
+                        <td className="py-3.5 px-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Link
+                              to={`/store/product/${prod.id}`}
+                              className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600"
+                              title="View Product Page in Store"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5" />
+                            </Link>
+                            <button
+                              type="button"
+                              onClick={() => deleteProduct(prod.id)}
+                              className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600"
+                              title="Delete Product from Store"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 3: ORDERS & DISPATCHES */}
+        {activeTab === 'orders' && (
+          <div className="space-y-6">
+            {/* Filter toolbar */}
+            <div className="rounded-2xl bg-white border border-slate-200 p-4 shadow-xs flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-1.5 overflow-x-auto text-xs">
+                {['All', 'Placed', 'Processing', 'Dispatched', 'Delivered'].map((st) => (
+                  <button
+                    key={st}
+                    type="button"
+                    onClick={() => setOrderStatusFilter(st)}
+                    className={`px-3 py-1.5 rounded-xl font-bold transition whitespace-nowrap ${
+                      orderStatusFilter === st
+                        ? 'bg-forest-950 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    {st}
+                  </button>
+                ))}
+              </div>
+
+              <div className="text-xs text-slate-500 font-medium">
+                Total {filteredOrders.length} Order{filteredOrders.length === 1 ? '' : 's'}
+              </div>
+            </div>
+
+            {/* Orders Cards */}
+            <div className="space-y-4">
+              {filteredOrders.length === 0 ? (
+                <div className="rounded-2xl bg-white border border-slate-200 p-8 text-center text-slate-500">
+                  <Package className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                  <p className="font-bold text-slate-800">No orders found in this status</p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Try switching filters or place a test order from the Farmer Store.
+                  </p>
+                </div>
+              ) : (
+                filteredOrders.map((order) => (
+                  <div
+                    key={order.id}
+                    className="rounded-2xl bg-white border border-slate-200 p-5 shadow-xs space-y-4 hover:border-slate-300 transition"
+                  >
+                    {/* Header line */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono font-bold text-sm text-slate-950">
+                            {order.id}
+                          </span>
+                          <span
+                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                              order.orderStatus === 'Delivered'
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : order.orderStatus === 'Dispatched'
+                                ? 'bg-sky-100 text-sky-800'
+                                : order.orderStatus === 'Processing'
+                                ? 'bg-indigo-100 text-indigo-800'
+                                : 'bg-amber-100 text-amber-800'
+                            }`}
+                          >
+                            ● {order.orderStatus}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-400 mt-0.5">
+                          Placed on {new Date(order.createdAt).toLocaleDateString()} at{' '}
+                          {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setInvoiceOrder(order)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold transition"
+                        >
+                          <FileText className="w-3.5 h-3.5 text-slate-500" />
+                          <span>Demo GST Invoice</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Customer & Items detail */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                      {/* Farmer info */}
+                      <div className="rounded-xl bg-slate-50 p-3.5 border border-slate-100 space-y-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                          Buyer Farmer Details
+                        </span>
+                        <div className="font-bold text-slate-900 text-sm">
+                          {order.deliveryDetails.customerName}
+                        </div>
+                        <div className="text-slate-600">
+                          📞 {order.deliveryDetails.mobileNumber}
+                        </div>
+                        <div className="text-slate-500 leading-tight">
+                          📍 {order.deliveryDetails.deliveryAddress}, {order.deliveryDetails.village},{' '}
+                          {order.deliveryDetails.district}, {order.deliveryDetails.state} -{' '}
+                          {order.deliveryDetails.pinCode}
+                        </div>
+                      </div>
+
+                      {/* Items */}
+                      <div className="rounded-xl bg-slate-50 p-3.5 border border-slate-100 md:col-span-2 space-y-2">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                          Dispatched Line Items ({order.items.length})
+                        </span>
+                        <div className="divide-y divide-slate-200">
+                          {order.items.map((it) => (
+                            <div key={it.productId} className="py-1.5 flex items-center justify-between">
+                              <div>
+                                <span className="font-semibold text-slate-900">{it.productName}</span>
+                                <span className="text-[11px] text-slate-500 ml-2">
+                                  ({it.packSize}) × {it.quantity}
+                                </span>
+                              </div>
+                              <span className="font-bold text-slate-900">
+                                ₹{(it.lineTotalPaise / 100).toLocaleString('en-IN')}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="pt-2 border-t border-slate-200 flex items-center justify-between font-bold text-sm text-slate-950">
+                          <span>
+                            Total Value ({order.paymentMode.includes('UPI') ? 'UPI' : 'COD'})
+                          </span>
+                          <span>₹{(order.totalPayablePaise / 100).toLocaleString('en-IN')}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Status Advance Workflow Controls */}
+                    <div className="pt-2 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100">
+                      <div className="text-xs text-slate-500">
+                        Dispatch Stage:{' '}
+                        <strong className="text-slate-800">{order.orderStatus}</strong>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {order.orderStatus === 'Placed' && (
+                          <button
+                            type="button"
+                            onClick={() => updateOrderStatus(order.id, 'Processing')}
+                            className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-xs transition"
+                          >
+                            📦 Pack & Process Order
+                          </button>
+                        )}
+                        {order.orderStatus === 'Processing' && (
+                          <button
+                            type="button"
+                            onClick={() => updateOrderStatus(order.id, 'Dispatched')}
+                            className="px-3.5 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs shadow-xs transition"
+                          >
+                            🚚 Mark as Dispatched (Assign Tracking ID)
+                          </button>
+                        )}
+                        {order.orderStatus === 'Dispatched' && (
+                          <button
+                            type="button"
+                            onClick={() => updateOrderStatus(order.id, 'Delivered')}
+                            className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition"
+                          >
+                            ✅ Confirm Delivered to Farmer
+                          </button>
+                        )}
+                        {order.orderStatus === 'Delivered' && (
+                          <span className="text-xs text-emerald-800 font-bold flex items-center gap-1">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                            Order Successfully Fulfilled
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 4: PAYOUTS */}
+        {activeTab === 'payouts' && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="rounded-2xl bg-white border border-slate-200 p-5 shadow-xs">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 block mb-1">
+                  Settled Payouts to Date
+                </span>
+                <div className="text-2xl font-extrabold text-emerald-800">₹3,14,500</div>
+                <p className="text-[11px] text-slate-500 mt-1">Directly credited via NEFT / RTGS</p>
+              </div>
+
+              <div className="rounded-2xl bg-white border border-slate-200 p-5 shadow-xs">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 block mb-1">
+                  Next Scheduled Settlement
+                </span>
+                <div className="text-2xl font-extrabold text-slate-900">₹28,350</div>
+                <p className="text-[11px] text-amber-700 font-semibold mt-1">
+                  Scheduled for upcoming Friday Mandi cycle
+                </p>
+              </div>
+
+              <div className="rounded-2xl bg-white border border-slate-200 p-5 shadow-xs">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 block mb-1">
+                  Verified Payout Bank Account
+                </span>
+                <div className="text-sm font-bold text-slate-900">
+                  {sellerProfile.bankAccountName || 'Karnal Kisan Agro Co-op'}
+                </div>
+                <p className="text-[11px] text-slate-500 mt-1 font-mono">
+                  A/C: ••••4561 • IFSC: {sellerProfile.ifscCode}
+                </p>
+              </div>
+            </div>
+
+            {/* Payout records */}
+            <div className="rounded-2xl bg-white border border-slate-200 shadow-xs overflow-hidden">
+              <div className="p-4 border-b border-slate-100">
+                <h2 className="text-sm font-bold text-slate-900">Settlement Transaction History</h2>
+                <p className="text-xs text-slate-500">Automated weekly settlements for orders delivered to farmers</p>
+              </div>
+
+              <table className="w-full text-left text-xs text-slate-700">
+                <thead className="bg-slate-50 text-[11px] font-semibold text-slate-500 border-b border-slate-200">
+                  <tr>
+                    <th className="py-3 px-4">Cycle Period</th>
+                    <th className="py-3 px-4">Settlement UTR Ref</th>
+                    <th className="py-3 px-4">Delivered Orders</th>
+                    <th className="py-3 px-4">Amount</th>
+                    <th className="py-3 px-4">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  <tr>
+                    <td className="py-3 px-4 font-semibold text-slate-900">Oct 01 – Oct 07, 2026</td>
+                    <td className="py-3 px-4 font-mono text-slate-600">SBIN-NEFT-20261007-8912</td>
+                    <td className="py-3 px-4">9 orders</td>
+                    <td className="py-3 px-4 font-bold text-emerald-800">₹94,200</td>
+                    <td className="py-3 px-4">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                        Credited
+                      </span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 px-4 font-semibold text-slate-900">Sep 24 – Sep 30, 2026</td>
+                    <td className="py-3 px-4 font-mono text-slate-600">SBIN-NEFT-20260930-4102</td>
+                    <td className="py-3 px-4">12 orders</td>
+                    <td className="py-3 px-4 font-bold text-emerald-800">₹1,22,500</td>
+                    <td className="py-3 px-4">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                        Credited
+                      </span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 px-4 font-semibold text-slate-900">Sep 17 – Sep 23, 2026</td>
+                    <td className="py-3 px-4 font-mono text-slate-600">SBIN-NEFT-20260923-1189</td>
+                    <td className="py-3 px-4">8 orders</td>
+                    <td className="py-3 px-4 font-bold text-emerald-800">₹97,800</td>
+                    <td className="py-3 px-4">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                        Credited
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 5: SETTINGS */}
+        {activeTab === 'settings' && (
+          <div className="space-y-6">
+            <div className="rounded-2xl bg-white border border-slate-200 p-6 shadow-xs max-w-3xl space-y-5">
+              <div>
+                <h2 className="text-base font-bold text-slate-900">Store Profile & Tax Identity</h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Update your enterprise details as displayed on farmer invoices and catalog listings.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Business Name</label>
+                  <input
+                    type="text"
+                    value={sellerProfile.businessName}
+                    onChange={(e) => updateSellerProfile({ businessName: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Authorized Contact</label>
+                  <input
+                    type="text"
+                    value={sellerProfile.contactPerson}
+                    onChange={(e) => updateSellerProfile({ contactPerson: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Registered GSTIN</label>
+                  <input
+                    type="text"
+                    value={sellerProfile.gstin}
+                    onChange={(e) => updateSellerProfile({ gstin: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-slate-900 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">License Number</label>
+                  <input
+                    type="text"
+                    value={sellerProfile.licenseNumber || ''}
+                    onChange={(e) => updateSellerProfile({ licenseNumber: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-slate-900 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block font-semibold text-slate-700 mb-1">Dispatch Yard Address</label>
+                  <input
+                    type="text"
+                    value={sellerProfile.address}
+                    onChange={(e) => updateSellerProfile({ address: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                <span className="text-xs text-emerald-800 font-semibold flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  Auto-saved to local browser storage
+                </span>
+                <button
+                  type="button"
+                  onClick={() => alert('Store profile updated successfully!')}
+                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
+
+      {/* ADD PRODUCT MODAL */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden my-8">
+            <div className="bg-forest-950 text-white p-5 flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-bold flex items-center gap-2">
+                  <Plus className="w-4 h-4 text-emerald-400" />
+                  Add New Product to Store Catalog
+                </h3>
+                <p className="text-xs text-forest-300 mt-0.5">
+                  This product will be instantly visible in the Farmer Marketplace
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddModal(false)}
+                className="p-1 rounded-lg hover:bg-forest-800 text-forest-300 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateProduct} className="p-6 space-y-4 text-xs">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Product Name <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newProdName}
+                  onChange={(e) => setNewProdName(e.target.value)}
+                  placeholder="e.g., Pusa Tejas Foundation Wheat Seed Lot"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Category</label>
+                  <select
+                    value={newProdCategory}
+                    onChange={(e) => setNewProdCategory(e.target.value as ProductCategory)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-slate-900 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  >
+                    {PRODUCT_CATEGORIES.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Brand Name</label>
+                  <input
+                    type="text"
+                    value={newProdBrand}
+                    onChange={(e) => setNewProdBrand(e.target.value)}
+                    placeholder="e.g., Karnal Kisan Agro (Co-op)"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Pack Size / Unit</label>
+                  <input
+                    type="text"
+                    value={newProdPackSize}
+                    onChange={(e) => setNewProdPackSize(e.target.value)}
+                    placeholder="e.g., 40 kg Bag, 1 Litre Bottle"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Stock Quantity (Units)</label>
+                  <input
+                    type="number"
+                    value={newProdStock}
+                    onChange={(e) => setNewProdStock(e.target.value)}
+                    placeholder="50"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Selling Price (₹)</label>
+                  <input
+                    type="number"
+                    value={newProdPriceRs}
+                    onChange={(e) => setNewProdPriceRs(e.target.value)}
+                    placeholder="1450"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">MRP (₹)</label>
+                  <input
+                    type="number"
+                    value={newProdMrpRs}
+                    onChange={(e) => setNewProdMrpRs(e.target.value)}
+                    placeholder="1650"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Short Description & Benefits
+                </label>
+                <textarea
+                  rows={2}
+                  value={newProdShortDesc}
+                  onChange={(e) => setNewProdShortDesc(e.target.value)}
+                  placeholder="Certified high-germination seed lot tested for rust resistance and high yields."
+                  className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Agronomic Usage Guidelines (For Farmer)
+                </label>
+                <input
+                  type="text"
+                  value={newProdUsage}
+                  onChange={(e) => setNewProdUsage(e.target.value)}
+                  placeholder="e.g., Sowing rate 40 kg/acre with seed drill at 4-5 cm depth."
+                  className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 font-semibold hover:bg-slate-50 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-sm transition"
+                >
+                  Publish Product Listing
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* DEMO GST INVOICE MODAL */}
+      {invoiceOrder && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden my-8">
+            <div className="bg-slate-900 text-white p-4 px-6 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Printer className="w-4 h-4 text-emerald-400" />
+                <span className="font-bold text-sm">Simulated Commercial GST Tax Invoice</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setInvoiceOrder(null)}
+                className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-5 text-xs text-slate-800">
+              {/* Invoice Meta */}
+              <div className="flex justify-between items-start border-b border-slate-200 pb-4">
+                <div>
+                  <h4 className="font-extrabold text-base text-slate-950">
+                    {sellerProfile.businessName}
+                  </h4>
+                  <p className="text-slate-500">{sellerProfile.address}</p>
+                  <p className="text-slate-500">
+                    GSTIN: <span className="font-mono font-bold text-slate-800">{sellerProfile.gstin}</span>
+                  </p>
+                  <p className="text-slate-500">License: {sellerProfile.licenseNumber}</p>
+                </div>
+                <div className="text-right">
+                  <div className="font-mono font-bold text-sm text-slate-900">
+                    INV-{invoiceOrder.id.replace('ORD-', '')}
+                  </div>
+                  <div className="text-slate-500">
+                    Date: {new Date(invoiceOrder.createdAt).toLocaleDateString()}
+                  </div>
+                  <div className="mt-1 inline-block px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-[10px]">
+                    Status: {invoiceOrder.orderStatus}
+                  </div>
+                </div>
+              </div>
+
+              {/* Bill to */}
+              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">
+                  Billed & Shipped To (Farmer)
+                </span>
+                <div className="font-bold text-slate-900 text-sm">
+                  {invoiceOrder.deliveryDetails.customerName}
+                </div>
+                <div className="text-slate-600">
+                  {invoiceOrder.deliveryDetails.deliveryAddress}, {invoiceOrder.deliveryDetails.village},{' '}
+                  {invoiceOrder.deliveryDetails.district}, {invoiceOrder.deliveryDetails.state} -{' '}
+                  {invoiceOrder.deliveryDetails.pinCode}
+                </div>
+                <div className="text-slate-500 mt-0.5">
+                  Mobile: {invoiceOrder.deliveryDetails.mobileNumber}
+                </div>
+              </div>
+
+              {/* Items Table */}
+              <table className="w-full text-left border border-slate-200 rounded-lg overflow-hidden">
+                <thead className="bg-slate-100 text-[11px] font-bold text-slate-600">
+                  <tr>
+                    <th className="p-2.5">Item Description</th>
+                    <th className="p-2.5 text-center">HSN</th>
+                    <th className="p-2.5 text-center">Qty</th>
+                    <th className="p-2.5 text-right">Rate</th>
+                    <th className="p-2.5 text-right">Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {invoiceOrder.items.map((item) => (
+                    <tr key={item.productId}>
+                      <td className="p-2.5 font-medium text-slate-900">
+                        {item.productName}
+                        <div className="text-[10px] text-slate-400">{item.packSize}</div>
+                      </td>
+                      <td className="p-2.5 text-center font-mono text-slate-500">1209</td>
+                      <td className="p-2.5 text-center font-semibold">{item.quantity}</td>
+                      <td className="p-2.5 text-right font-mono">
+                        ₹{(item.unitPricePaise / 100).toLocaleString('en-IN')}
+                      </td>
+                      <td className="p-2.5 text-right font-bold text-slate-950 font-mono">
+                        ₹{(item.lineTotalPaise / 100).toLocaleString('en-IN')}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {/* Calculations */}
+              <div className="flex justify-end pt-2">
+                <div className="w-64 space-y-1.5 text-xs">
+                  <div className="flex justify-between text-slate-600">
+                    <span>Taxable Subtotal:</span>
+                    <span>₹{(invoiceOrder.subtotalPaise / 100).toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-600">
+                    <span>CGST (2.5%):</span>
+                    <span>₹{(invoiceOrder.subtotalPaise * 0.025 / 100).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-600">
+                    <span>SGST (2.5%):</span>
+                    <span>₹{(invoiceOrder.subtotalPaise * 0.025 / 100).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between font-bold text-slate-950 text-sm pt-2 border-t border-slate-200">
+                    <span>Total Invoice Value:</span>
+                    <span>₹{(invoiceOrder.totalPayablePaise / 100).toLocaleString('en-IN')}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer Note */}
+              <div className="text-[11px] text-slate-400 border-t border-slate-100 pt-3 flex items-center justify-between">
+                <span>Computer generated tax invoice • AgriPulse Seller Network</span>
+                <button
+                  type="button"
+                  onClick={() => window.print?.()}
+                  className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold transition flex items-center gap-1.5"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  Print Invoice
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};

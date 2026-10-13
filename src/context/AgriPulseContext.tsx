@@ -15,7 +15,10 @@ import {
   FieldObservation,
   GovernmentScheme,
   NewsArticle,
+  OrderStatus,
+  PortalType,
   RainfallLog,
+  SellerProfile,
   StoreProduct,
   WeatherSnapshot,
 } from '../types';
@@ -32,8 +35,14 @@ import { SEED_DICTIONARY_ENTRIES } from '../data/seedDictionary';
 import { SEED_GOVERNMENT_SCHEMES, SEED_NEWS_ARTICLES } from '../data/seedNewsAndSchemes';
 import { VALID_DEMO_PROMO_CODES } from '../data/seedProducts';
 
-export const DEMO_ACCOUNT_EMAIL = 'farmer.demo@AgriPulse.in';
-export const DEMO_ACCOUNT_PASSWORD = 'Farm@2026!';
+export const DEMO_FARMER_EMAIL = 'farmer.demo@agrisense.in';
+export const DEMO_FARMER_PASSWORD = 'Farm@2026!';
+
+export const DEMO_SELLER_EMAIL = 'seller.demo@kisanmart.in';
+export const DEMO_SELLER_PASSWORD = 'Seller@2026!';
+
+export const DEMO_ACCOUNT_EMAIL = DEMO_FARMER_EMAIL;
+export const DEMO_ACCOUNT_PASSWORD = DEMO_FARMER_PASSWORD;
 
 interface CartTotals {
   subtotalPaise: number;
@@ -50,11 +59,29 @@ interface AgriPulseContextValue {
   loginWithCredentials: (
     email: string,
     password: string,
-    rememberMe: boolean
+    rememberMe: boolean,
+    intendedPortal?: PortalType
+  ) => Promise<{ ok: boolean; portal: PortalType; error?: string }>;
+  loginAsSellerDemo: () => Promise<{ ok: boolean; portal: PortalType }>;
+  loginAsFarmerDemo: () => Promise<{ ok: boolean; portal: PortalType }>;
+  registerSeller: (
+    sellerData: Partial<SellerProfile> & { password?: string }
   ) => Promise<{ ok: boolean; error?: string }>;
+  registerFarmer: (
+    farmerData: Partial<FarmerProfile> & { password?: string }
+  ) => Promise<{ ok: boolean; error?: string }>;
+  switchPortal: (target: PortalType) => void;
   logout: () => void;
 
-  // Profile & Preferences
+  // Seller Profile & Catalog Management
+  sellerProfile: SellerProfile;
+  updateSellerProfile: (updated: Partial<SellerProfile>) => void;
+  addProduct: (product: Omit<StoreProduct, 'id'>) => StoreProduct;
+  updateProduct: (product: StoreProduct) => void;
+  deleteProduct: (productId: string) => void;
+  updateOrderStatus: (orderId: string, status: OrderStatus) => void;
+
+  // Profile & Preferences (Farmer)
   profile: FarmerProfile;
   updateProfile: (updated: FarmerProfile) => void;
   customLogoUrl: string | null;
@@ -128,6 +155,10 @@ interface AgriPulseContextValue {
   toggleWishlist: (productId: string) => void;
   recentProducts: string[];
   recordProductView: (productId: string) => void;
+  addStoreProductReview: (
+    productId: string,
+    review: { userName: string; rating: number; title: string; comment: string }
+  ) => void;
 
   checkoutDraft: CheckoutAddressDraft;
   updateCheckoutDraft: (draft: Partial<CheckoutAddressDraft>) => void;
@@ -163,6 +194,7 @@ export const AgriPulseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const [session, setSession] = useState<AuthSession | null>(() => readAuthSession());
   const [profile, setProfile] = useState<FarmerProfile>(initialSnapshot.profile);
+  const [sellerProfile, setSellerProfile] = useState<SellerProfile>(initialSnapshot.sellerProfile);
   const [farms, setFarms] = useState<Farm[]>(initialSnapshot.farms);
   const [plots, setPlots] = useState<FarmPlot[]>(initialSnapshot.plots);
   const [crops, setCrops] = useState<CropRecord[]>(initialSnapshot.crops);
@@ -219,36 +251,205 @@ export const AgriPulseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const loginWithCredentials = async (
     email: string,
     password: string,
-    rememberMe: boolean
-  ): Promise<{ ok: boolean; error?: string }> => {
+    rememberMe: boolean,
+    intendedPortal?: PortalType
+  ): Promise<{ ok: boolean; portal: PortalType; error?: string }> => {
     await new Promise((r) => setTimeout(r, 380));
 
-    const trimmedEmail = email.trim();
-    const isDemoMatch =
-      trimmedEmail.toLowerCase() === DEMO_ACCOUNT_EMAIL.toLowerCase() &&
-      password === DEMO_ACCOUNT_PASSWORD;
+    const trimmedEmail = email.trim().toLowerCase();
 
-    if (!isDemoMatch) {
-      return {
-        ok: false,
-        error:
-          'Invalid email or password. For the demonstration farmer account, please use farmer.demo@AgriPulse.in and Farm@2026! (or click "Use Demo Account").',
+    // Check if seller demo match
+    const isSellerDemo =
+      (trimmedEmail === DEMO_SELLER_EMAIL.toLowerCase() ||
+        trimmedEmail === 'seller.demo@kisanmart.in' ||
+        trimmedEmail === 'seller.demo@agripulse.in' ||
+        trimmedEmail === 'seller@kisanmart.in') &&
+      password === DEMO_SELLER_PASSWORD;
+
+    // Check if farmer demo match
+    const isFarmerDemo =
+      (trimmedEmail === DEMO_FARMER_EMAIL.toLowerCase() ||
+        trimmedEmail === 'farmer.demo@agrisense.in' ||
+        trimmedEmail === 'farmer.demo@agripulse.in' ||
+        trimmedEmail === 'farmer@agrisense.in') &&
+      password === DEMO_FARMER_PASSWORD;
+
+    if (isSellerDemo) {
+      const newSession: AuthSession = {
+        version: 'v1',
+        userId: sellerProfile.id,
+        email: DEMO_SELLER_EMAIL,
+        sellerName: sellerProfile.businessName,
+        role: 'Seller',
+        portalType: 'seller',
+        isDemo: true,
+        rememberMe,
+        loggedInAt: new Date().toISOString(),
       };
+      writeAuthSession(newSession);
+      setSession(newSession);
+      return { ok: true, portal: 'seller' };
     }
 
+    if (isFarmerDemo) {
+      const newSession: AuthSession = {
+        version: 'v1',
+        userId: profile.id,
+        email: DEMO_FARMER_EMAIL,
+        farmerName: profile.name,
+        role: 'Farmer',
+        portalType: 'farmer',
+        isDemo: true,
+        rememberMe,
+        loggedInAt: new Date().toISOString(),
+      };
+      writeAuthSession(newSession);
+      setSession(newSession);
+      return { ok: true, portal: 'farmer' };
+    }
+
+    // Custom non-demo credentials
+    if (password.length >= 6) {
+      const resolvedPortal: PortalType =
+        intendedPortal ||
+        (trimmedEmail.includes('seller') || trimmedEmail.includes('vendor') || trimmedEmail.includes('dealer')
+          ? 'seller'
+          : 'farmer');
+      const isSeller = resolvedPortal === 'seller';
+      const newSession: AuthSession = {
+        version: 'v1',
+        userId: isSeller ? `seller-${Date.now()}` : `farmer-${Date.now()}`,
+        email: trimmedEmail,
+        sellerName: isSeller ? sellerProfile.businessName || `${trimmedEmail.split('@')[0]} Agro Store` : undefined,
+        farmerName: !isSeller ? profile.name || trimmedEmail.split('@')[0] : undefined,
+        role: isSeller ? 'Seller' : 'Farmer',
+        portalType: resolvedPortal,
+        isDemo: false,
+        rememberMe,
+        loggedInAt: new Date().toISOString(),
+      };
+      writeAuthSession(newSession);
+      setSession(newSession);
+      return { ok: true, portal: resolvedPortal };
+    }
+
+    return {
+      ok: false,
+      portal: intendedPortal || 'seller',
+      error:
+        intendedPortal === 'seller'
+          ? 'Invalid seller credentials. For demo, use seller.demo@kisanmart.in and Seller@2026!, or click "1-Click Demo Seller Sign In".'
+          : 'Invalid farmer credentials. For demo, use farmer.demo@agrisense.in and Farm@2026!, or click "1-Click Demo Farmer Sign In".',
+    };
+  };
+
+  const loginAsSellerDemo = async (): Promise<{ ok: boolean; portal: PortalType }> => {
+    await new Promise((r) => setTimeout(r, 200));
+    const newSession: AuthSession = {
+      version: 'v1',
+      userId: sellerProfile.id,
+      email: DEMO_SELLER_EMAIL,
+      sellerName: sellerProfile.businessName,
+      role: 'Seller',
+      portalType: 'seller',
+      isDemo: true,
+      rememberMe: true,
+      loggedInAt: new Date().toISOString(),
+    };
+    writeAuthSession(newSession);
+    setSession(newSession);
+    return { ok: true, portal: 'seller' };
+  };
+
+  const loginAsFarmerDemo = async (): Promise<{ ok: boolean; portal: PortalType }> => {
+    await new Promise((r) => setTimeout(r, 200));
     const newSession: AuthSession = {
       version: 'v1',
       userId: profile.id,
-      email: DEMO_ACCOUNT_EMAIL,
+      email: DEMO_FARMER_EMAIL,
       farmerName: profile.name,
+      role: 'Farmer',
+      portalType: 'farmer',
       isDemo: true,
-      rememberMe,
+      rememberMe: true,
       loggedInAt: new Date().toISOString(),
     };
+    writeAuthSession(newSession);
+    setSession(newSession);
+    return { ok: true, portal: 'farmer' };
+  };
 
+  const registerSeller = async (
+    sellerData: Partial<SellerProfile> & { password?: string }
+  ): Promise<{ ok: boolean; error?: string }> => {
+    await new Promise((r) => setTimeout(r, 300));
+    const updatedSeller: SellerProfile = {
+      ...sellerProfile,
+      ...sellerData,
+      id: sellerProfile.id || `seller-${Date.now()}`,
+      businessName: sellerData.businessName || 'New Agro Store Partner',
+      email: sellerData.email || 'seller@kisanmart.in',
+      isVerified: true,
+      joinedDate: new Date().toISOString().split('T')[0],
+    };
+    setSellerProfile(updatedSeller);
+    safeWriteStorage(STORAGE_KEYS.SELLER_PROFILE, updatedSeller);
+
+    const newSession: AuthSession = {
+      version: 'v1',
+      userId: updatedSeller.id,
+      email: updatedSeller.email,
+      sellerName: updatedSeller.businessName,
+      role: 'Seller',
+      portalType: 'seller',
+      isDemo: false,
+      rememberMe: true,
+      loggedInAt: new Date().toISOString(),
+    };
     writeAuthSession(newSession);
     setSession(newSession);
     return { ok: true };
+  };
+
+  const registerFarmer = async (
+    farmerData: Partial<FarmerProfile> & { password?: string }
+  ): Promise<{ ok: boolean; error?: string }> => {
+    await new Promise((r) => setTimeout(r, 300));
+    const updatedFarmer: FarmerProfile = {
+      ...profile,
+      ...farmerData,
+      name: farmerData.name || 'Progressive Farmer',
+      email: farmerData.email || 'farmer@agrisense.in',
+      joinedDate: new Date().toISOString().split('T')[0],
+    };
+    setProfile(updatedFarmer);
+    safeWriteStorage(STORAGE_KEYS.PROFILE, updatedFarmer);
+
+    const newSession: AuthSession = {
+      version: 'v1',
+      userId: updatedFarmer.id,
+      email: updatedFarmer.email,
+      farmerName: updatedFarmer.name,
+      role: 'Farmer',
+      portalType: 'farmer',
+      isDemo: false,
+      rememberMe: true,
+      loggedInAt: new Date().toISOString(),
+    };
+    writeAuthSession(newSession);
+    setSession(newSession);
+    return { ok: true };
+  };
+
+  const switchPortal = (target: PortalType) => {
+    if (session) {
+      const updated: AuthSession = {
+        ...session,
+        portalType: target,
+      };
+      setSession(updated);
+      writeAuthSession(updated);
+    }
   };
 
   const logout = () => {
@@ -271,6 +472,49 @@ export const AgriPulseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   };
 
+  const updateSellerProfile = (updated: Partial<SellerProfile>) => {
+    const next: SellerProfile = { ...sellerProfile, ...updated };
+    setSellerProfile(next);
+    safeWriteStorage(STORAGE_KEYS.SELLER_PROFILE, next);
+    if (session && session.portalType === 'seller') {
+      const nextSession: AuthSession = {
+        ...session,
+        sellerName: next.businessName,
+      };
+      setSession(nextSession);
+      writeAuthSession(nextSession);
+    }
+  };
+
+  const addProduct = (prod: Omit<StoreProduct, 'id'>): StoreProduct => {
+    const newProduct: StoreProduct = {
+      ...prod,
+      id: `prod-${Date.now()}`,
+    };
+    const next = [newProduct, ...products];
+    setProducts(next);
+    safeWriteStorage(STORAGE_KEYS.PRODUCTS, next);
+    return newProduct;
+  };
+
+  const updateProduct = (updated: StoreProduct) => {
+    const next = products.map((p) => (p.id === updated.id ? updated : p));
+    setProducts(next);
+    safeWriteStorage(STORAGE_KEYS.PRODUCTS, next);
+  };
+
+  const deleteProduct = (productId: string) => {
+    const next = products.filter((p) => p.id !== productId);
+    setProducts(next);
+    safeWriteStorage(STORAGE_KEYS.PRODUCTS, next);
+  };
+
+  const updateOrderStatus = (orderId: string, status: OrderStatus) => {
+    const next = orders.map((o) => (o.id === orderId ? { ...o, orderStatus: status } : o));
+    setOrders(next);
+    safeWriteStorage(STORAGE_KEYS.ORDERS, next);
+  };
+
   const setCustomLogoUrl = (dataUrl: string | null) => {
     setCustomLogoUrlState(dataUrl);
     safeWriteStorage(STORAGE_KEYS.CUSTOM_LOGO, dataUrl);
@@ -280,6 +524,7 @@ export const AgriPulseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     resetAllDemoDataToSeed();
     const fresh = loadInitialDataSnapshot();
     setProfile(fresh.profile);
+    setSellerProfile(fresh.sellerProfile);
     setFarms(fresh.farms);
     setPlots(fresh.plots);
     setCrops(fresh.crops);
@@ -664,6 +909,37 @@ export const AgriPulseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     safeWriteStorage(STORAGE_KEYS.RECENT_PRODUCTS, next);
   };
 
+  const addStoreProductReview = (
+    productId: string,
+    newRev: { userName: string; rating: number; title: string; comment: string }
+  ) => {
+    const nextProducts = products.map((p) => {
+      if (p.id !== productId) return p;
+      const existingReviews = p.reviews || [];
+      const createdReview = {
+        id: `rev-${Date.now()}`,
+        userName: newRev.userName,
+        rating: newRev.rating,
+        title: newRev.title,
+        comment: newRev.comment,
+        date: new Date().toISOString().split('T')[0],
+        verifiedPurchase: true,
+      };
+      const updatedReviews = [createdReview, ...existingReviews];
+      const avgRating = Number(
+        (updatedReviews.reduce((sum, r) => sum + r.rating, 0) / updatedReviews.length).toFixed(1)
+      );
+      return {
+        ...p,
+        reviews: updatedReviews,
+        rating: avgRating,
+        reviewCount: updatedReviews.length,
+      };
+    });
+    setProducts(nextProducts);
+    safeWriteStorage(STORAGE_KEYS.PRODUCTS, nextProducts);
+  };
+
   const updateCheckoutDraft = (draft: Partial<CheckoutAddressDraft>) => {
     const next = { ...checkoutDraft, ...draft };
     setCheckoutDraft(next);
@@ -787,7 +1063,18 @@ export const AgriPulseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const value: AgriPulseContextValue = {
     session,
     loginWithCredentials,
+    loginAsSellerDemo,
+    loginAsFarmerDemo,
+    registerSeller,
+    registerFarmer,
+    switchPortal,
     logout,
+    sellerProfile,
+    updateSellerProfile,
+    addProduct,
+    updateProduct,
+    deleteProduct,
+    updateOrderStatus,
     profile,
     updateProfile,
     customLogoUrl,
@@ -840,6 +1127,7 @@ export const AgriPulseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     toggleWishlist,
     recentProducts,
     recordProductView,
+    addStoreProductReview,
     checkoutDraft,
     updateCheckoutDraft,
     orders,

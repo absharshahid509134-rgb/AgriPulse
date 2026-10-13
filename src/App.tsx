@@ -9,14 +9,21 @@ import {
 import { AgriPulseProvider, useAgriPulse } from './context/AgriPulseContext';
 import { AppShell } from './components/AppShell';
 import { LoginPage } from './pages/LoginPage';
+import { SellerSignUpPage } from './pages/SellerSignUpPage';
+import { FarmerLoginPage } from './pages/FarmerLoginPage';
+import { FarmerSignUpPage } from './pages/FarmerSignUpPage';
+import { SellerPortalPage } from './pages/SellerPortalPage';
 import { HomeDashboardPage } from './pages/HomeDashboardPage';
 import { FarmManagementPage } from './pages/FarmManagementPage';
 import { WeatherIntelligencePage } from './pages/WeatherIntelligencePage';
 import { DictionaryPage } from './pages/DictionaryPage';
 import { DiseaseAnalysisPage } from './pages/DiseaseAnalysisPage';
 import { StorePage } from './pages/StorePage';
+import { ProductDetailPage } from './pages/ProductDetailPage';
 import { CartAndCheckoutPage } from './pages/CartAndCheckoutPage';
 import { OrdersPage } from './pages/OrdersPage';
+import { WishlistPage } from './pages/WishlistPage';
+import { OffersPage } from './pages/OffersPage';
 import { NewsPage } from './pages/NewsPage';
 import { SchemesPage } from './pages/SchemesPage';
 import { AccountSettingsPage } from './pages/AccountSettingsPage';
@@ -26,7 +33,8 @@ const ProtectedRouteGuard: React.FC<{ children: React.ReactNode }> = ({ children
   const location = useLocation();
 
   if (!session) {
-    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+    const isFarmerPath = location.pathname.startsWith('/home') || location.pathname.startsWith('/farm');
+    return <Navigate to={isFarmerPath ? '/farmer/login' : '/login'} state={{ from: location.pathname }} replace />;
   }
 
   return <>{children}</>;
@@ -34,7 +42,10 @@ const ProtectedRouteGuard: React.FC<{ children: React.ReactNode }> = ({ children
 
 const RootRedirect: React.FC = () => {
   const { session } = useAgriPulse();
-  return <Navigate to={session ? '/home' : '/login'} replace />;
+  if (!session) {
+    return <Navigate to="/login" replace />;
+  }
+  return <Navigate to={session.portalType === 'seller' ? '/seller' : '/home'} replace />;
 };
 
 export const App: React.FC = () => {
@@ -42,13 +53,41 @@ export const App: React.FC = () => {
     <AgriPulseProvider>
       <BrowserRouter>
         <Routes>
-          {/* Public Login Route */}
+          {/* Public Authentication Routes */}
+          {/* Seller Log In */}
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/seller/login" element={<LoginPage />} />
 
-          {/* Root Redirect */}
+          {/* Seller Sign Up */}
+          <Route path="/signup" element={<SellerSignUpPage />} />
+          <Route path="/seller/signup" element={<SellerSignUpPage />} />
+
+          {/* Farmer Sign In & Sign Up */}
+          <Route path="/farmer/login" element={<FarmerLoginPage />} />
+          <Route path="/farmer/signup" element={<FarmerSignUpPage />} />
+
+          {/* Root Redirect to respective portal */}
           <Route path="/" element={<RootRedirect />} />
 
-          {/* Protected Application Routes */}
+          {/* Dedicated Seller Portal */}
+          <Route
+            path="/seller"
+            element={
+              <ProtectedRouteGuard>
+                <SellerPortalPage />
+              </ProtectedRouteGuard>
+            }
+          />
+          <Route
+            path="/seller/dashboard"
+            element={
+              <ProtectedRouteGuard>
+                <SellerPortalPage />
+              </ProtectedRouteGuard>
+            }
+          />
+
+          {/* Protected Farmer Portal Routes */}
           <Route
             element={
               <ProtectedRouteGuard>
@@ -62,8 +101,13 @@ export const App: React.FC = () => {
             <Route path="/dictionary" element={<DictionaryPage />} />
             <Route path="/disease" element={<DiseaseAnalysisPage />} />
             <Route path="/store" element={<StorePage />} />
+            <Route path="/store/product/:productId" element={<ProductDetailPage />} />
             <Route path="/cart" element={<CartAndCheckoutPage />} />
+            <Route path="/checkout" element={<CartAndCheckoutPage />} />
             <Route path="/orders" element={<OrdersPage />} />
+            <Route path="/orders/:orderId" element={<OrdersPage />} />
+            <Route path="/wishlist" element={<WishlistPage />} />
+            <Route path="/offers" element={<OffersPage />} />
             <Route path="/news" element={<NewsPage />} />
             <Route path="/schemes" element={<SchemesPage />} />
             <Route path="/account" element={<AccountSettingsPage />} />

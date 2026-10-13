@@ -86,7 +86,7 @@ export async function generateAssistantReply(
       suggestedLinks: [
         { label: 'Open Farm Workspace', route: '/farm' },
         { label: 'View Dashboard Calendar', route: '/home' },
-        { label: 'Log Symptom Check', route: '/disease' },
+        { label: '100 Diseases Directory', route: '/disease' },
       ],
     };
   }
@@ -128,9 +128,9 @@ export async function generateAssistantReply(
     return {
       sender: 'assistant',
       modeLabel: 'Demo Rule-Based Guidance',
-      text: `[Educational Symptom Scouting Guide]\nWhen investigating yellow leaves (chlorosis) on your farm, check three clues first:\n1. Which leaves turned yellow first?\n   • Older bottom leaves (uniform pale yellow) → Often Nitrogen scarcity or waterlogged roots.\n   • Older bottom leaves (green veins, yellow between veins) → Often Magnesium deficiency (common in fruiting tomatoes).\n   • Youngest top leaves (interveinal yellowing or rusty spots) → Often Iron or Zinc lockup (such as Khaira in paddy when soil pH > 7.5).\n2. Check under the leaf with a 10x lens: Look for whiteflies, aphids, or mites that cause yellow stippling and leaf curl.\n3. Check root-zone moisture at 15 cm depth: Over-watering suffocates roots and causes yellowing just like drought.\n\nFor a crop-specific checklist, use the Crop Disease & Symptom Analysis workspace and consult your local KVK officer before applying chemical sprays.`,
+      text: `[Educational Crop Health Scouting Guide]\nWhen investigating yellow leaves (chlorosis) on your farm, check three clues first:\n1. Which leaves turned yellow first?\n   • Older bottom leaves (uniform pale yellow) → Often Nitrogen scarcity or waterlogged roots.\n   • Older bottom leaves (green veins, yellow between veins) → Often Magnesium deficiency (common in fruiting tomatoes).\n   • Youngest top leaves (interveinal yellowing or rusty spots) → Often Iron or Zinc lockup (such as Khaira in paddy when soil pH > 7.5).\n2. Check under the leaf with a 10x lens: Look for whiteflies, aphids, or mites that cause yellow stippling and leaf curl.\n3. Check root-zone moisture at 15 cm depth: Over-watering suffocates roots and causes yellowing just like drought.\n\nFor a crop-specific disease profile, explore the 100 Crop Diseases Encyclopedia and consult your local KVK officer before applying chemical sprays.`,
       suggestedLinks: [
-        { label: 'Open Disease & Symptom Analysis', route: '/disease' },
+        { label: 'Open 100 Crop Diseases Directory', route: '/disease' },
         { label: 'Read "Interveinal Chlorosis" in Dictionary', route: '/dictionary' },
         { label: 'Browse Sticky Traps & Micronutrients', route: '/store' },
       ],
@@ -206,7 +206,7 @@ export async function generateAssistantReply(
     return {
       sender: 'assistant',
       modeLabel: 'Demo Rule-Based Guidance',
-      text: `[Demo Store Recommendations for ${preferredCrop}]\nHere are matching agricultural supplies from the AgriPulse Demo Store:\n${prodText}\n\nYou can filter by crop compatibility, compare specifications, and test the complete demo checkout workflow in the Store.`,
+      text: `[Demo Store Recommendations for ${preferredCrop}]\nHere are matching agricultural supplies from the AgriSense Store catalog:\n${prodText}\n\nYou can inspect individual product details, compare specifications, and complete simulated checkout with demo vouchers.`,
       suggestedLinks: [
         { label: 'Browse Agricultural Store', route: '/store' },
         { label: 'View Shopping Cart', route: '/cart' },
@@ -214,14 +214,40 @@ export async function generateAssistantReply(
     };
   }
 
-  // 7. Follow-up or general fallback using context
+  // 7. Warranty & Quality Assurance question
+  if (q.includes('warranty') || q.includes('guarantee') || q.includes('service') || q.includes('replacement')) {
+    return {
+      sender: 'assistant',
+      modeLabel: 'Demo Rule-Based Guidance',
+      text: `[AgriSense Quality & Warranty Policy Overview]\n• Agricultural Equipment & Soil Meters: Come with a 12-month manufacturer defect warranty covering mechanical components, calibration probes, and pressure seals.\n• Certified Seeds: Covered by a Laboratory Germination & Physical Purity Assurance guarantee (>85% standard emergence).\n• Bio-Inputs & Nutrients: Guaranteed compliant with Fertilizer Control Order (FCO) specifications in sealed packages.\n• Return/Replacement Policy: AgriSense provides a 7-day demo replacement window if packaging is broken or defective upon delivery. You can check each item's dedicated Warranty & Service section on its product page.`,
+      suggestedLinks: [
+        { label: 'Browse Agricultural Store', route: '/store' },
+        { label: 'View Demo Order History', route: '/orders' },
+      ],
+    };
+  }
+
+  // 8. 100 Crop Diseases / Pathology questions
+  if (q.includes('disease') || q.includes('pathology') || q.includes('blast') || q.includes('rust') || q.includes('blight') || q.includes('wilt') || q.includes('smut')) {
+    return {
+      sender: 'assistant',
+      modeLabel: 'Demo Rule-Based Guidance',
+      text: `[AgriSense 100 Crop Diseases Encyclopedia]\nOur platform includes complete scientific profiles for 100 major crop diseases across Indian agriculture:\n• Cereals: Rice blast (#1), BLB (#2), Wheat stripe rust (#11), Loose smut (#13)\n• Pulses: Chickpea wilt (#31), Ascochyta blight (#32), Mungbean yellow mosaic (#39)\n• Vegetables: Tomato early blight (#66), Late blight (#67), Bacterial wilt (#68)\n• Oilseeds & Commercial: Mustard Alternaria (#52), Cotton leaf curl (#59), Sugarcane red rot (#61)\n• Fruits: Mango anthracnose (#91), Citrus canker (#94), Banana Fusarium wilt TR4 (#96)\n\nEach profile details causal pathogens, primary field symptoms, favorable weather conditions, and Integrated Disease Management (IDM) practices.`,
+      suggestedLinks: [
+        { label: 'Open 100 Crop Diseases Directory', route: '/disease' },
+        { label: 'Search Pathology Profiles', route: '/disease' },
+      ],
+    };
+  }
+
+  // 9. Follow-up or general fallback using context
   return {
     sender: 'assistant',
     modeLabel: 'Demo Rule-Based Guidance',
-    text: `[Demo Rule-Based Assistant]\nI received your question: "${userQuery}".\n\nBased on your saved profile (${ctx.profile.name}, ${ctx.profile.district}, ${ctx.profile.state}), you currently have ${ctx.farms.filter((f) => !f.isArchived).length} active farm(s), ${ctx.crops.length} crop record(s), and ${pendingActivities.length} pending farm activity item(s).\n\nTry asking me:\n• "What should I check on my farm today?"\n• "Explain today's weather for my crop."\n• "How do I investigate yellow leaves?"\n• "Explain soil pH in simple language."\n• "Help me find suitable agricultural schemes."\n• "Show me products for my selected crop."`,
+    text: `[AgriSense AI Farm Assistant]\nI received your question: "${userQuery}".\n\nBased on your registered profile (${ctx.profile.name}, ${ctx.profile.district}, ${ctx.profile.state}), you currently have ${ctx.farms.filter((f) => !f.isArchived).length} active farm(s), ${ctx.crops.length} crop record(s), and ${pendingActivities.length} pending farm activity item(s).\n\nTry asking me:\n• "What should I check on my farm today?"\n• "Explain today's weather for my crop."\n• "How do I investigate yellow leaves?"\n• "Explain the warranty of store products."\n• "Tell me about wheat stripe rust in the 100 diseases list."\n• "Help me find suitable agricultural schemes."\n• "Show me products for my selected crop."`,
     suggestedLinks: [
       { label: 'Dashboard Overview', route: '/home' },
-      { label: 'Agricultural Dictionary', route: '/dictionary' },
+      { label: '100 Diseases Directory', route: '/disease' },
       { label: 'Agricultural Store', route: '/store' },
     ],
   };

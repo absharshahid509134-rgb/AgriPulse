@@ -105,15 +105,15 @@ export const FloatingAIChat: React.FC = () => {
           type="button"
           onClick={() => setIsChatOpen(true)}
           className="fixed bottom-20 lg:bottom-6 right-4 lg:right-6 z-40 flex items-center gap-2.5 bg-forest-800 hover:bg-forest-900 text-white pl-2 pr-4 py-2 rounded-full shadow-lg border border-forest-600 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-forest-700"
-          aria-label="Open AGRIPULSE AI Assistant"
+          aria-label="Open AGRISENSE AI Assistant"
         >
           <img
             src="/ai-advisor-avatar.png"
-            alt="AgriPulse AI Advisor"
+            alt="AgriSense AI Advisor"
             className="w-8 h-8 rounded-full object-cover border-2 border-leaf-400 shadow-sm"
           />
           <span className="text-xs font-semibold tracking-wide hidden sm:inline">
-            Ask AGRIPULSE AI
+            Ask AGRISENSE AI
           </span>
           <MessageSquareText className="w-4 h-4 sm:hidden" />
         </button>
@@ -123,7 +123,7 @@ export const FloatingAIChat: React.FC = () => {
       {isChatOpen && (
         <div
           role="dialog"
-          aria-label="AGRIPULSE AI Assistant"
+          aria-label="AGRISENSE AI Assistant"
           className="fixed bottom-16 lg:bottom-5 right-3 sm:right-6 z-50 w-[calc(100vw-1.5rem)] sm:w-[400px] max-h-[78vh] bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden"
         >
           {/* Header */}
@@ -131,18 +131,18 @@ export const FloatingAIChat: React.FC = () => {
             <div className="flex items-center gap-2.5">
               <img
                 src="/ai-advisor-avatar.png"
-                alt="AgriPulse AI Advisor"
+                alt="AgriSense AI Advisor"
                 className="w-9 h-9 rounded-full object-cover border-2 border-leaf-400 shadow-sm shrink-0"
               />
               <div>
                 <div className="flex items-center gap-1.5">
-                  <h3 className="text-sm font-bold leading-none">AGRIPULSE AI</h3>
+                  <h3 className="text-sm font-bold leading-none">AGRISENSE AI</h3>
                   <span className="text-[10px] font-semibold bg-amber-400/20 text-amber-200 border border-amber-400/30 px-1.5 py-0.5 rounded">
                     Demo Guidance
                   </span>
                 </div>
                 <p className="text-[11px] text-forest-200 mt-0.5">
-                  Context-aware farm & agronomy assistant
+                  Your Farm Assistant
                 </p>
               </div>
             </div>
