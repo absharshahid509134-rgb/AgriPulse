@@ -34,7 +34,7 @@ export const AgriSenseLogo: React.FC<AgriSenseLogoProps> = ({
       {/* Precision 1:1 Vector Emblem */}
       <div
         className={`${iconSizeClass} shrink-0 rounded-xl overflow-hidden shadow-sm transition-transform hover:scale-105`}
-        title="AGRISENSE Logo"
+        title="AGRIPULSE Logo"
       >
         <svg
           viewBox="0 0 512 512"
@@ -118,7 +118,7 @@ export const AgriSenseLogo: React.FC<AgriSenseLogoProps> = ({
       <div className="flex flex-col">
         <div className="flex items-baseline gap-0.5">
           <span className={`font-black tracking-tight leading-none ${titleSizeClass} ${textColor}`}>
-            AGRI<span className={accentColor}>SENSE</span>
+            AGRI<span className={accentColor}>PULSE</span>
           </span>
         </div>
         {showTagline ? (

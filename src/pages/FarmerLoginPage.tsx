@@ -11,18 +11,16 @@ import {
   HelpCircle,
   Sparkles,
   ArrowRight,
+  ShieldCheck,
   Store,
   Tractor,
   CloudSun,
   BookOpen,
-  Copy,
-  Check,
 } from 'lucide-react';
 import { AgriPulseLogo } from '../components/AgriPulseLogo';
 import {
-  DEMO_FARMER_EMAIL,
-  DEMO_FARMER_PASSWORD,
   useAgriPulse,
+  DEMO_MODE_ENABLED,
 } from '../context/AgriPulseContext';
 
 export const FarmerLoginPage: React.FC = () => {
@@ -37,7 +35,6 @@ export const FarmerLoginPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
-  const [copiedField, setCopiedField] = useState<string | null>(null);
 
   // If already logged in, redirect to respective portal
   if (session) {
@@ -54,12 +51,12 @@ export const FarmerLoginPage: React.FC = () => {
     if (!trimmed) {
       errs.email = 'Please enter your farmer account email address.';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
-      errs.email = 'Please enter a valid email format (e.g., farmer.demo@agrisense.in).';
+      errs.email = 'Please enter a valid email format (e.g., farmer@example.com).';
     }
     if (!passVal) {
       errs.password = 'Please enter your account password.';
-    } else if (passVal.length < 6) {
-      errs.password = 'Password must be at least 6 characters.';
+    } else if (passVal.length < 10) {
+      errs.password = 'Password must be at least 10 characters.';
     }
     setFieldErrors(errs);
     return Object.keys(errs).length === 0;
@@ -91,6 +88,8 @@ export const FarmerLoginPage: React.FC = () => {
       const res = await loginAsFarmerDemo();
       if (res.ok) {
         navigate('/home', { replace: true });
+      } else {
+        setErrorMsg(res.error || 'Could not open the development farmer workspace.');
       }
     } finally {
       setIsSubmitting(false);
@@ -104,44 +103,35 @@ export const FarmerLoginPage: React.FC = () => {
       const res = await loginAsSellerDemo();
       if (res.ok) {
         navigate('/seller', { replace: true });
+      } else {
+        setErrorMsg(res.error || 'Could not open the development seller workspace.');
       }
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleFillFarmerDemo = () => {
-    setEmail(DEMO_FARMER_EMAIL);
-    setPassword(DEMO_FARMER_PASSWORD);
-    setFieldErrors({});
-    setErrorMsg(null);
-  };
 
-  const handleCopy = (text: string, label: string) => {
-    void navigator.clipboard?.writeText(text);
-    setCopiedField(label);
-    setTimeout(() => setCopiedField(null), 1600);
-  };
 
   return (
-    <div className="min-h-screen bg-warmbg flex flex-col justify-between">
+    <div className="farmer-login-page min-h-screen bg-warmbg flex flex-col justify-between">
       {/* Top Header */}
-      <header className="bg-forest-950 text-white border-b border-forest-800 px-4 sm:px-8 py-3.5 flex items-center justify-between">
+      <header className="login-header bg-white text-forest-950 border-b border-forest-100 px-4 sm:px-8 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <AgriPulseLogo size="md" theme="light" />
+          <AgriPulseLogo size="md" theme="dark" />
           <span className="hidden sm:inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-leaf-500/20 text-leaf-300 border border-leaf-500/30">
             Farmer Portal
           </span>
         </div>
         <div className="flex items-center gap-3 text-xs">
-          <button
+          {DEMO_MODE_ENABLED && <button
             type="button"
             onClick={handleInstantDemoSeller}
             className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-forest-900 hover:bg-forest-800 text-forest-200 hover:text-white border border-forest-700 transition"
           >
             <Store className="w-3.5 h-3.5 text-amber-400" />
             <span>Open Seller Demo</span>
-          </button>
+          </button>}
           <Link
             to="/login"
             className="px-3.5 py-1.5 rounded-lg bg-forest-800 hover:bg-forest-700 text-forest-100 hover:text-white font-medium border border-forest-700 transition"
@@ -152,9 +142,9 @@ export const FarmerLoginPage: React.FC = () => {
       </header>
 
       {/* Main Split Layout */}
-      <main className="max-w-6xl mx-auto w-full px-4 py-8 sm:py-12 flex-1 flex flex-col lg:flex-row items-center gap-8 lg:gap-12">
+      <main className="farmer-login-main login-main max-w-6xl mx-auto w-full px-4 py-8 sm:py-10 flex-1 grid grid-cols-1 lg:grid-cols-2 items-stretch gap-6 lg:gap-8">
         {/* Left Hero Card */}
-        <div className="lg:w-1/2 w-full space-y-6">
+        <div className="farmer-login-story space-y-6">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-leaf-500/10 border border-leaf-600/30 text-leaf-800 text-xs font-semibold">
             <Sprout className="w-4 h-4 text-leaf-600" />
             <span>Intelligent Farm Digital Twin & Agronomic Intelligence</span>
@@ -211,13 +201,13 @@ export const FarmerLoginPage: React.FC = () => {
         </div>
 
         {/* Right Form Card */}
-        <div className="lg:w-1/2 w-full">
-          <div className="bg-white rounded-3xl shadow-lg border border-forest-100 p-6 sm:p-8">
+        <div className="login-form-wrap">
+          <div className="login-form-card bg-white rounded-3xl shadow-lg border border-forest-100 p-6 sm:p-8">
             {/* Fast 1-Click Action */}
-            <div className="mb-6 pb-6 border-b border-forest-100">
+            {DEMO_MODE_ENABLED && <div className="mb-6 pb-6 border-b border-forest-100">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-bold uppercase tracking-wider text-leaf-800">
-                  Instant Demonstration
+                  Development Demo Access
                 </span>
                 <span className="text-[11px] text-forest-600 font-medium">No typing required</span>
               </div>
@@ -228,14 +218,14 @@ export const FarmerLoginPage: React.FC = () => {
                 className="w-full inline-flex items-center justify-center gap-2.5 py-3 px-4 rounded-2xl bg-leaf-600 hover:bg-leaf-700 text-white font-bold text-sm shadow-md transition transform active:scale-98"
               >
                 <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
-                <span>1-Click Demo Farmer Sign In & Launch Portal</span>
+                <span>Open Farmer Demo Workspace</span>
               </button>
-            </div>
+            </div>}
 
             {/* Standard Sign In Form */}
             <form onSubmit={handleFarmerLogin} className="space-y-4">
               <div className="text-xs font-bold uppercase tracking-wider text-forest-700 mb-1">
-                Or Sign In with Farmer Credentials
+                Farmer account sign-in
               </div>
 
               {errorMsg && (
@@ -261,7 +251,7 @@ export const FarmerLoginPage: React.FC = () => {
                       setEmail(e.target.value);
                       if (fieldErrors.email) setFieldErrors({ ...fieldErrors, email: undefined });
                     }}
-                    placeholder="farmer.demo@agrisense.in"
+                    placeholder="farmer@example.com"
                     className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-forest-200 text-forest-950 text-sm focus:outline-none focus:ring-2 focus:ring-leaf-500"
                   />
                 </div>
@@ -310,13 +300,6 @@ export const FarmerLoginPage: React.FC = () => {
                   />
                   <span className="text-forest-700">Remember this session</span>
                 </label>
-                <button
-                  type="button"
-                  onClick={handleFillFarmerDemo}
-                  className="text-leaf-700 hover:text-leaf-800 font-semibold hover:underline"
-                >
-                  Auto-fill Demo Credentials
-                </button>
               </div>
 
               <button
@@ -329,54 +312,11 @@ export const FarmerLoginPage: React.FC = () => {
               </button>
             </form>
 
-            {/* Demo Account Reference Card */}
-            <div className="mt-6 rounded-2xl bg-forest-50/70 border border-forest-200/60 p-4 text-xs">
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-bold text-forest-900 flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-leaf-600" />
-                  Default Demonstration Farmer Account
-                </span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-leaf-100 text-leaf-800 font-semibold">
-                  Sample Data Pre-loaded
-                </span>
-              </div>
-
-              <div className="space-y-1.5 font-mono text-[11px] text-forest-800">
-                <div className="flex items-center justify-between bg-white px-2.5 py-1.5 rounded-lg border border-forest-100">
-                  <span>
-                    Email:{' '}
-                    <strong className="text-forest-950 font-semibold">{DEMO_FARMER_EMAIL}</strong>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleCopy(DEMO_FARMER_EMAIL, 'email')}
-                    className="text-forest-500 hover:text-forest-900 ml-2"
-                  >
-                    {copiedField === 'email' ? (
-                      <Check className="w-3.5 h-3.5 text-leaf-600" />
-                    ) : (
-                      <Copy className="w-3.5 h-3.5" />
-                    )}
-                  </button>
-                </div>
-                <div className="flex items-center justify-between bg-white px-2.5 py-1.5 rounded-lg border border-forest-100">
-                  <span>
-                    Password:{' '}
-                    <strong className="text-forest-950 font-semibold">{DEMO_FARMER_PASSWORD}</strong>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleCopy(DEMO_FARMER_PASSWORD, 'password')}
-                    className="text-forest-500 hover:text-forest-900 ml-2"
-                  >
-                    {copiedField === 'password' ? (
-                      <Check className="w-3.5 h-3.5 text-leaf-600" />
-                    ) : (
-                      <Copy className="w-3.5 h-3.5" />
-                    )}
-                  </button>
-                </div>
-              </div>
+            <div className="auth-security-note mt-5">
+              <ShieldCheck className="w-4 h-4" />
+              <p>{DEMO_MODE_ENABLED
+                ? 'Account sign-in uses the AGRIPULSE API. Development demo access is available through the labelled one-click launcher above; no reusable password is embedded in the site.'
+                : 'Sign-in is handled by the AGRIPULSE API. Email verification and password recovery are not configured here; use a unique password.'}</p>
             </div>
 
             {/* Bottom Links */}
@@ -394,7 +334,7 @@ export const FarmerLoginPage: React.FC = () => {
 
       {/* Footer */}
       <footer className="text-center py-6 text-xs text-forest-600 border-t border-forest-100">
-        © 2026 AgriPulse Agricultural Intelligence & Farm Digital Twin.
+        © 2026 AGRIPULSE Farmer Portal.
       </footer>
     </div>
   );

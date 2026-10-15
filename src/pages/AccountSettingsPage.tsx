@@ -10,21 +10,20 @@ import {
   Bell,
   Database,
 } from 'lucide-react';
-import {
-  DEMO_ACCOUNT_EMAIL,
-  DEMO_ACCOUNT_PASSWORD,
-  useAgriPulse,
-} from '../context/AgriPulseContext';
+import { DEMO_ACCOUNT_EMAIL, useAgriPulse } from '../context/AgriPulseContext';
 import { AreaUnit, LanguageCode } from '../types';
 import { REGIONAL_BIGHA_FACTORS } from '../utils/formatters';
 
 export const AccountSettingsPage: React.FC = () => {
   const {
+    session,
     profile,
     updateProfile,
     farms,
     logout,
     resetAllDemoData,
+    workspaceSyncStatus,
+    workspaceSyncError,
   } = useAgriPulse();
 
   const navigate = useNavigate();
@@ -90,7 +89,7 @@ export const AccountSettingsPage: React.FC = () => {
       },
     });
 
-    setSavedBanner('Saved farmer profile and platform preferences to browser storage.');
+    setSavedBanner('Profile and preferences updated. The authenticated workspace is syncing to the AGRIPULSE API.');
     setTimeout(() => setSavedBanner(null), 4000);
   };
 
@@ -98,7 +97,7 @@ export const AccountSettingsPage: React.FC = () => {
     resetAllDemoData();
     setShowResetConfirm(false);
     setSavedBanner(
-      'All demo farms, crops, observations, cart items, orders, and preferences have been reset to the initial seed dataset.'
+      'The development demo workspace was restored to its initial sample data. Device registry records are unchanged; check the save status before leaving.'
     );
     setTimeout(() => setSavedBanner(null), 5000);
   };
@@ -114,12 +113,11 @@ export const AccountSettingsPage: React.FC = () => {
       <div className="bg-forest-900 text-white rounded-2xl p-5 shadow-sm border border-forest-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-leaf-500/20 text-leaf-300 border border-leaf-400/30 text-[11px] font-bold mb-1.5">
-            <span>Demonstration Farmer Account Profile</span>
+            <span>Farmer Account Profile</span>
           </div>
           <h2 className="text-xl font-extrabold">{profile.name}</h2>
           <p className="text-xs text-forest-200 mt-0.5">
-            Demo Login Email: <code>{DEMO_ACCOUNT_EMAIL}</code> • Password:{' '}
-            <code>{DEMO_ACCOUNT_PASSWORD}</code> (Protected so advertised demo credentials always work)
+            {profile.isDemoAccount ? 'Development demo profile · ' : 'Authenticated farmer profile · '}{profile.email}. Passwords are server-hashed; no device secret is exposed to this page.
           </p>
         </div>
 
@@ -129,7 +127,7 @@ export const AccountSettingsPage: React.FC = () => {
           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-800/80 hover:bg-red-700 text-white text-xs font-bold border border-red-600/50 transition-colors self-start sm:self-auto"
         >
           <LogOut className="w-4 h-4" />
-          <span>Sign Out of Demo Session</span>
+          <span>Sign out of AGRIPULSE</span>
         </button>
       </div>
 
@@ -168,16 +166,16 @@ export const AccountSettingsPage: React.FC = () => {
 
             <div>
               <label className="block font-semibold text-slate-700 mb-1">
-                Demo Login Email Address (Read-Only for Demo Stability)
+                Account Email Address (Read-Only in this Prototype)
               </label>
               <input
                 type="email"
                 readOnly
-                value={DEMO_ACCOUNT_EMAIL}
+                value={profile.email || DEMO_ACCOUNT_EMAIL}
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-100 text-slate-600 font-mono cursor-not-allowed"
               />
               <span className="text-[11px] text-slate-500 block mt-1">
-                Demo credentials ({DEMO_ACCOUNT_EMAIL} / {DEMO_ACCOUNT_PASSWORD}) remain locked so any evaluator can sign in reliably.
+                Password authentication is handled by the production API when connected. Demo access is available only in the development workspace.
               </span>
             </div>
 
@@ -394,35 +392,41 @@ export const AccountSettingsPage: React.FC = () => {
             ))}
           </section>
 
-          {/* Browser Storage Disclosure */}
           <section className="lg:col-span-6 bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
             <h3 className="text-base font-bold text-slate-900 pb-2 border-b border-slate-100 flex items-center gap-2">
               <Database className="w-4 h-4 text-forest-700" />
-              <span>Local Storage & Data Management</span>
+              <span>Workspace persistence & data safety</span>
             </h3>
 
             <div className="p-3.5 rounded-xl bg-amber-50/80 border border-amber-200 text-amber-950 space-y-1.5">
               <p className="font-bold flex items-center gap-1.5">
                 <ShieldAlert className="w-4 h-4 text-amber-700" />
-                <span>What Local Demo Data is Stored in Your Browser?</span>
+                <span>{session?.isDemo ? 'Development demo data' : 'Account workspace data'}</span>
               </p>
               <p className="text-[11px] leading-relaxed">
-                AgriSense stores versioned keys (<code>AgriPulse:v1:*</code>) in this browser&apos;s{' '}
-                <code>localStorage</code> for your demo session, farms, plots, crop records, observations, activities, cart, wishlist, and demo orders. Note: Browser <code>localStorage</code> does not sync across different devices or separate browsers until connected to a shared database such as Supabase.
+                {session?.isDemo
+                  ? 'Farm, profile, observation and sample commerce changes sync to this development server’s SQLite workspace. This is not a production service or a verified agricultural record. Device metadata, pairing events and telemetry are stored separately by the authenticated API; sample devices do not prove physical installation.'
+                  : 'Farm, profile, observation and workspace commerce changes sync to the authenticated AGRIPULSE API. This development deployment uses local SQLite persistence, not a managed production database. Device metadata, pairing events and physical telemetry are stored separately and are never kept in browser storage.'}{' '}
+                Browser storage is development-only and may contain non-sensitive drafts or cached demo UI data. Never enter network passwords, provisioning tokens, SIM PINs, private keys, bank credentials, or real payment details. Weather forecasts and crop-health content are not a substitute for professional advice.
               </p>
             </div>
+            {(workspaceSyncError || workspaceSyncStatus === 'saving') && (
+              <p role={workspaceSyncError ? 'alert' : 'status'} className="text-xs font-semibold text-amber-900">
+                {workspaceSyncError ? `Workspace sync issue: ${workspaceSyncError}` : 'Saving workspace changes to the server…'}
+              </p>
+            )}
           </section>
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-4 bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
-          <button
+          {import.meta.env.DEV && session?.isDemo && <button
             type="button"
             onClick={() => setShowResetConfirm(true)}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-950 border border-amber-300 text-xs font-bold"
           >
             <RotateCcw className="w-4 h-4 text-amber-700" />
-            <span>Reset Demo Data to Initial Seed</span>
-          </button>
+            <span>Reset Development Demo Data</span>
+          </button>}
 
           <button
             type="submit"
@@ -438,19 +442,19 @@ export const AccountSettingsPage: React.FC = () => {
       {showResetConfirm && (
         <div
           role="alertdialog"
-          aria-label="Confirm Reset Demo Data"
+          aria-labelledby="demo-reset-title"
           className="bg-red-50 border-2 border-red-400 rounded-2xl p-5 space-y-3 text-xs text-red-950"
         >
           <h4 className="text-sm font-extrabold">
-            Confirm Resetting All Local Demo Data?
+            <span id="demo-reset-title">Reset development demo workspace?</span>
           </h4>
           <p className="leading-relaxed">
-            This action will restore the initial demonstration dataset for:
+            This action restores the demo account workspace to its initial sample dataset:
             <strong>
               {' '}
-              Farms, Plots, Crop Records, Field Observations, Activity Calendar, Disease Reports, Dictionary Bookmarks, Shopping Cart, Wishlist, and Demo Orders.
+              Farms, plots, crop records, observations, activities, disease reports, bookmarks, cart, wishlist, and sample orders.
             </strong>{' '}
-            Your active login session will remain signed in.
+            Device registry records are not reset. Your active demo login session remains signed in.
           </p>
           <div className="flex items-center gap-3 pt-1">
             <button

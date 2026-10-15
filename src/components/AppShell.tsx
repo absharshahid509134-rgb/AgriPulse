@@ -20,6 +20,7 @@ import {
   ChevronDown,
   AlertTriangle,
   Calendar,
+  RadioTower,
 } from 'lucide-react';
 import { AgriPulseLogo } from './AgriPulseLogo';
 import { FloatingAIChat } from './FloatingAIChat';
@@ -31,25 +32,38 @@ import {
   Store,
 } from 'lucide-react';
 
-const NAV_ITEMS = [
-  { to: '/home', label: 'Home', icon: Home },
-  { to: '/farm', label: 'Farm', icon: Tractor },
-  { to: '/weather', label: 'Weather', icon: CloudSun },
-  { to: '/dictionary', label: 'Dictionary', icon: BookOpen },
-  { to: '/disease', label: '100 Diseases', icon: BookOpen },
-  { to: '/store', label: 'Store', icon: ShoppingBag },
-  { to: '/offers', label: 'Offers', icon: Tag },
-  { to: '/orders', label: 'Orders', icon: Package },
-  { to: '/wishlist', label: 'Wishlist', icon: Heart },
-  { to: '/news', label: 'News', icon: Newspaper },
-  { to: '/schemes', label: 'Schemes', icon: Landmark },
-  { to: '/account', label: 'Account & Settings', icon: UserCog },
+const NAV_GROUPS = [
+  {
+    label: 'Farm & intelligence',
+    items: [
+      { to: '/home', label: 'Home', icon: Home },
+      { to: '/farm', label: 'Farm & plots', icon: Tractor },
+      { to: '/devices', label: 'Devices & IoT', icon: RadioTower },
+      { to: '/weather', label: 'Weather', icon: CloudSun },
+      { to: '/dictionary', label: 'Dictionary', icon: BookOpen },
+      { to: '/disease', label: 'Crop health library', icon: Stethoscope },
+    ],
+  },
+  {
+    label: 'Market & resources',
+    items: [
+      { to: '/store', label: 'Agri store', icon: ShoppingBag },
+      { to: '/offers', label: 'Seasonal offers', icon: Tag },
+      { to: '/orders', label: 'Orders', icon: Package },
+      { to: '/wishlist', label: 'Wishlist', icon: Heart },
+      { to: '/news', label: 'Farm news', icon: Newspaper },
+      { to: '/schemes', label: 'Govt. schemes', icon: Landmark },
+    ],
+  },
 ];
+
+const NAV_ITEMS = NAV_GROUPS.flatMap((group) => group.items);
 
 const ROUTE_TITLES: Record<string, { title: string; section: string }> = {
   '/home': { title: 'Personalized Farmer Dashboard', section: 'Home' },
   '/farm': { title: 'Farm & Plot Digital Twin', section: 'Farm Management' },
   '/weather': { title: 'Agro-Meteorological Intelligence', section: 'Weather' },
+  '/devices': { title: 'Devices & IoT', section: 'Farm Intelligence' },
   '/dictionary': { title: 'Agricultural Learning Dictionary', section: 'Dictionary' },
   '/disease': { title: '100 Crop Diseases Encyclopedia', section: 'Crop Health' },
   '/store': { title: 'Agricultural Online Store', section: 'Store' },
@@ -67,6 +81,8 @@ export const AppShell: React.FC = () => {
   const {
     session,
     switchPortal,
+    workspaceSyncStatus,
+    workspaceSyncError,
     profile,
     logout,
     weather,
@@ -76,6 +92,7 @@ export const AppShell: React.FC = () => {
     orders,
     dictionary,
     products,
+    devices,
   } = useAgriPulse();
 
   const location = useLocation();
@@ -87,17 +104,17 @@ export const AppShell: React.FC = () => {
   const [quickSearch, setQuickSearch] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
 
-  const currentMeta = ROUTE_TITLES[location.pathname] || {
-    title: 'AgriPulse Workspace',
-    section: 'Platform',
-  };
+  const currentMeta = ROUTE_TITLES[location.pathname] || (location.pathname.startsWith('/devices/')
+    ? { title: 'Device details & telemetry', section: 'Devices & IoT' }
+    : { title: 'AGRIPULSE Workspace', section: 'Platform' });
 
   const cartItemCount = useMemo(
     () => cart.reduce((acc, item) => acc + item.quantity, 0),
     [cart]
   );
+  const deviceBadgeCount = devices.filter((device) => device.status === 'pending_pairing' || device.status === 'pending_gateway_assignment' || device.status === 'offline' || device.status === 'attention_required').length;
 
-  // Build real attention notifications from saved records
+  // Build attention notifications from saved records
   const attentionItems = useMemo(() => {
     const items: { id: string; title: string; subtitle: string; route: string }[] = [];
 
@@ -132,6 +149,17 @@ export const AppShell: React.FC = () => {
       });
     }
 
+    const deviceUpdates = devices.filter((device) => device.status === 'attention_required' || device.status === 'offline' || device.status === 'pending_gateway_assignment' || device.status === 'pending_pairing').slice(0, 2);
+    for (const device of deviceUpdates) {
+      const statusLabel = device.status.replace(/_/g, ' ');
+      items.push({
+        id: `notif-device-${device.id}`,
+        title: `Device ${device.name}: ${statusLabel}`,
+        subtitle: `${device.isDemoRecord ? 'Demo record' : 'Device record'} · no status is changed manually`,
+        route: `/devices/${device.id}`,
+      });
+    }
+
     if (orders.length > 0) {
       items.push({
         id: `notif-ord-${orders[0].id}`,
@@ -142,7 +170,7 @@ export const AppShell: React.FC = () => {
     }
 
     return items;
-  }, [activities, diseaseReports, weather, orders]);
+  }, [activities, diseaseReports, weather, orders, devices]);
 
   // Quick search suggestions across pages, products, and dictionary
   const quickSearchResults = useMemo(() => {
@@ -207,152 +235,80 @@ export const AppShell: React.FC = () => {
     .join('');
 
   return (
-    <div className="min-h-screen bg-warmbg text-slate-900 flex flex-col lg:flex-row">
+    <div className="app-shell min-h-screen bg-warmbg text-slate-900 flex flex-col lg:flex-row">
       {/* Desktop Left Sidebar */}
       <aside
         aria-label="Primary Sidebar Navigation"
-        className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-forest-950 text-white border-r border-forest-900 z-30"
+        className="app-sidebar hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-forest-950 text-white border-r border-forest-900 z-30"
       >
         {/* Brand Header */}
-        <div className="px-5 py-4 border-b border-forest-800/80 flex items-center justify-between">
+        <div className="app-sidebar-brand px-5 py-5 border-b border-forest-800/80 flex items-center justify-between">
           <NavLink to="/home" className="focus:outline-none">
             <AgriPulseLogo size="md" theme="light" />
           </NavLink>
         </div>
 
         {/* Navigation Links */}
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          <div className="px-3 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-forest-400">
-            Farm & Intelligence
-          </div>
-          {NAV_ITEMS.slice(0, 5).map((item) => {
-            const Icon = item.icon;
-            return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-colors ${
-                    isActive
-                      ? 'bg-forest-800 text-white shadow-sm border border-forest-700'
-                      : 'text-forest-200 hover:bg-forest-900 hover:text-white'
-                  }`
-                }
-              >
-                <Icon className="w-4 h-4 text-leaf-400 shrink-0" />
-                <span>{item.label}</span>
-              </NavLink>
-            );
-          })}
-
-          <div className="px-3 pt-4 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-forest-400">
-            Commerce & Advisories
-          </div>
-          {NAV_ITEMS.slice(5, 8).map((item) => {
-            const Icon = item.icon;
-            return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) =>
-                  `flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-colors ${
-                    isActive
-                      ? 'bg-forest-800 text-white shadow-sm border border-forest-700'
-                      : 'text-forest-200 hover:bg-forest-900 hover:text-white'
-                  }`
-                }
-              >
-                <span className="flex items-center gap-3">
-                  <Icon className="w-4 h-4 text-leaf-400 shrink-0" />
-                  <span>{item.label}</span>
-                </span>
-              </NavLink>
-            );
-          })}
+        <nav className="app-sidebar-nav flex-1 px-3 py-4 space-y-1 overflow-y-auto" aria-label="Farmer portal navigation">
+          {NAV_GROUPS.map((group) => (
+            <div key={group.label} className="app-nav-group">
+              <div className="px-3 pb-2 pt-3 text-[10px] font-bold uppercase tracking-[0.16em] text-forest-300/80">{group.label}</div>
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                const badgeCount = item.to === '/devices' ? deviceBadgeCount : item.to === '/orders' ? orders.length : 0;
+                return (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    className={({ isActive }) => `app-nav-link flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-colors ${isActive ? 'is-active' : ''}`}
+                  >
+                    <span className="flex items-center gap-3 min-w-0">
+                      <Icon className="w-[17px] h-[17px] shrink-0" />
+                      <span className="truncate">{item.label}</span>
+                    </span>
+                    {badgeCount > 0 && <span className={`app-nav-count ${item.to === '/devices' ? 'is-device' : ''}`}>{badgeCount}</span>}
+                  </NavLink>
+                );
+              })}
+            </div>
+          ))}
 
           <NavLink
             to="/cart"
-            className={({ isActive }) =>
-              `flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-colors ${
-                isActive
-                  ? 'bg-forest-800 text-white shadow-sm border border-forest-700'
-                  : 'text-forest-200 hover:bg-forest-900 hover:text-white'
-              }`
-            }
+            className={({ isActive }) => `app-nav-link flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-colors ${isActive ? 'is-active' : ''}`}
           >
-            <span className="flex items-center gap-3">
-              <ShoppingCart className="w-4 h-4 text-harvest-400 shrink-0" />
-              <span>Shopping Cart</span>
-            </span>
-            {cartItemCount > 0 && (
-              <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-harvest-500 text-forest-950">
-                {cartItemCount}
-              </span>
-            )}
+            <span className="flex items-center gap-3 min-w-0"><ShoppingCart className="w-[17px] h-[17px] shrink-0 text-harvest-300" /><span>Shopping cart</span></span>
+            {cartItemCount > 0 && <span className="app-nav-count is-cart">{cartItemCount}</span>}
           </NavLink>
 
-          <NavLink
-            to="/orders"
-            className={({ isActive }) =>
-              `flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-colors ${
-                isActive
-                  ? 'bg-forest-800 text-white shadow-sm border border-forest-700'
-                  : 'text-forest-200 hover:bg-forest-900 hover:text-white'
-              }`
-            }
-          >
-            <span className="flex items-center gap-3">
-              <Package className="w-4 h-4 text-leaf-400 shrink-0" />
-              <span>Demo Orders</span>
-            </span>
-            <span className="text-[10px] text-forest-300">{orders.length}</span>
-          </NavLink>
-
-          {/* Direct Link to Seller Portal */}
-          <button
+          {/* Demo accounts can switch portals; production accounts need an assigned role. */}
+          {session?.isDemo && <button
             type="button"
-            onClick={() => {
-              switchPortal('seller');
-              navigate('/seller');
-            }}
-            className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-emerald-300 hover:bg-forest-900 border border-emerald-500/30 bg-emerald-950/40 transition my-1"
+            onClick={async () => { if (await switchPortal('seller')) navigate('/seller'); }}
+            className="app-seller-switch w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition my-2"
           >
-            <span className="flex items-center gap-3">
-              <Store className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span>Seller Central Hub</span>
-            </span>
-            <span className="text-[9px] uppercase font-extrabold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">
-              Seller
-            </span>
-          </button>
+            <span className="flex items-center gap-3"><Store className="w-[17px] h-[17px] shrink-0" /><span>Seller Central</span></span>
+            <span className="app-seller-switch-tag">Switch</span>
+          </button>}
 
-          <div className="px-3 pt-4 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-forest-400">
-            Account
-          </div>
+          <div className="px-3 pt-3 pb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-forest-300/80">Your account</div>
           <NavLink
             to="/account"
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-colors ${
-                isActive
-                  ? 'bg-forest-800 text-white shadow-sm border border-forest-700'
-                  : 'text-forest-200 hover:bg-forest-900 hover:text-white'
-              }`
-            }
+            className={({ isActive }) => `app-nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-colors ${isActive ? 'is-active' : ''}`}
           >
-            <UserCog className="w-4 h-4 text-leaf-400 shrink-0" />
-            <span>Account & Settings</span>
+            <UserCog className="w-[17px] h-[17px] shrink-0" /><span>Account & settings</span>
           </NavLink>
         </nav>
 
         {/* Sidebar Footer & Logout */}
-        <div className="p-3 border-t border-forest-800/80 bg-forest-900/50">
+        <div className="app-sidebar-footer p-3 border-t border-forest-800/80 bg-forest-900/50">
           <div className="px-2.5 py-2 mb-2 rounded-lg bg-forest-900/90 border border-forest-800">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-semibold text-white truncate">
                 {profile.name}
               </span>
               <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-leaf-500/20 text-leaf-300 border border-leaf-500/30">
-                Demo
+                {session?.isDemo ? 'Demo' : 'Account'}
               </span>
             </div>
             <p className="text-[10px] text-forest-300 truncate mt-0.5">
@@ -371,9 +327,9 @@ export const AppShell: React.FC = () => {
       </aside>
 
       {/* Main Content Column */}
-      <div className="flex-1 lg:pl-64 flex flex-col min-h-screen min-w-0">
+      <div className="app-main-column flex-1 lg:pl-64 flex flex-col min-h-screen min-w-0">
         {/* Top Bar */}
-        <header className="sticky top-0 z-20 bg-white/95 backdrop-blur border-b border-slate-200 px-4 sm:px-6 py-2.5">
+        <header className="app-header sticky top-0 z-20 bg-white/95 backdrop-blur border-b border-slate-200 px-4 sm:px-6 py-3">
           <div className="flex items-center justify-between gap-3">
             {/* Left: Mobile Menu + Page Breadcrumb */}
             <div className="flex items-center gap-3 min-w-0">
@@ -461,19 +417,16 @@ export const AppShell: React.FC = () => {
                 </span>
               </button>
 
-              {/* Seller Central Switch Button */}
-              <button
+              {/* Demo-only portal switch; the API enforces production account roles. */}
+              {session?.isDemo && <button
                 type="button"
-                onClick={() => {
-                  switchPortal('seller');
-                  navigate('/seller');
-                }}
+                onClick={async () => { if (await switchPortal('seller')) navigate('/seller'); }}
                 className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-forest-950 hover:bg-forest-900 text-emerald-300 hover:text-white border border-forest-800 text-xs font-bold transition shadow-xs"
                 title="Switch to Seller Central Portal"
               >
                 <Store className="w-3.5 h-3.5 text-emerald-400" />
                 <span>Seller Portal</span>
-              </button>
+              </button>}
 
               {/* Quick Cart Button */}
               <button
@@ -582,7 +535,7 @@ export const AppShell: React.FC = () => {
                           {profile.name}
                         </p>
                         <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-forest-50 text-forest-800 border border-forest-200">
-                          Demo
+                          {session?.isDemo ? 'Demo' : 'Account'}
                         </span>
                       </div>
                       <p className="text-[11px] text-slate-500 truncate mt-0.5">
@@ -650,8 +603,25 @@ export const AppShell: React.FC = () => {
           </div>
         )}
 
+        {session?.isDemo && (
+          <div className="demo-workspace-banner" role="status">
+            <AlertTriangle className="demo-workspace-icon" aria-hidden="true" />
+            <p><strong>Development demo · sample workspace.</strong> Demo data is saved by this local development API and is not a production account. Device records do not prove physical pairing or telemetry. Do not enter sensitive personal, financial, network, or device credentials.</p>
+          </div>
+        )}
+
+        {workspaceSyncError ? (
+          <div role="alert" className="mx-4 mt-3 rounded-xl border border-rose-300 bg-rose-50 px-4 py-2.5 text-xs font-semibold text-rose-900 sm:mx-6 lg:mx-8">
+            Workspace changes could not be saved: {workspaceSyncError}
+          </div>
+        ) : workspaceSyncStatus === 'saving' ? (
+          <div role="status" className="mx-4 mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-xs text-emerald-900 sm:mx-6 lg:mx-8">
+            Saving workspace changes to the AGRIPULSE API…
+          </div>
+        ) : null}
+
         {/* Page Content */}
-        <main className="flex-1 px-4 sm:px-6 py-5 pb-24 lg:pb-10 max-w-7xl w-full mx-auto">
+        <main className="app-content flex-1 px-4 sm:px-6 lg:px-8 py-6 sm:py-7 pb-24 lg:pb-10 max-w-[1440px] w-full mx-auto">
           <Outlet />
         </main>
       </div>
@@ -745,13 +715,13 @@ export const AppShell: React.FC = () => {
       {/* Mobile Compact Bottom Navigation Bar */}
       <nav
         aria-label="Mobile Bottom Navigation"
-        className="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-white border-t border-slate-200 px-2 py-1.5 grid grid-cols-5 gap-1 shadow-lg"
+        className="app-mobile-bottom-nav lg:hidden fixed bottom-0 inset-x-0 z-30 bg-white border-t border-slate-200 px-2 py-1.5 grid grid-cols-5 gap-1 shadow-lg"
       >
         {[
           { to: '/home', label: 'Home', icon: Home },
           { to: '/farm', label: 'Farm', icon: Tractor },
+          { to: '/devices', label: 'Devices', icon: RadioTower },
           { to: '/weather', label: 'Weather', icon: CloudSun },
-          { to: '/store', label: 'Store', icon: ShoppingBag },
         ].map((item) => {
           const Icon = item.icon;
           return (
@@ -775,7 +745,7 @@ export const AppShell: React.FC = () => {
           className="flex flex-col items-center justify-center py-1 rounded-lg text-[10px] font-semibold text-slate-600"
         >
           <Menu className="w-4 h-4 mb-0.5" />
-          <span>All (9)</span>
+          <span>All</span>
         </button>
       </nav>
 

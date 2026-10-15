@@ -1,7 +1,9 @@
 {
-  "name": "AGRISENSE",
-  "description": "AGRISENSE — Intelligent Farm Digital Twin & Early Crop-Stress Detection System. Measure. Understand. Predict. Protect.",
+  "name": "AGRIPULSE",
+  "description": "AGRIPULSE — responsive farmer and seller portal prototype with farm records, weather guidance, crop-health references, marketplace previews, and Devices & IoT demo registry.",
   "capabilities": [
-    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+    "FARMER_SELLER_PORTALS",
+    "FARM_DIGITAL_TWIN_PROTOTYPE",
+    "DEVICES_IOT_DEMO"
   ]
 }

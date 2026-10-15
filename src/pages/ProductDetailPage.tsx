@@ -47,8 +47,9 @@ export const ProductDetailPage: React.FC = () => {
 
   const [selectedGalleryIdx, setSelectedGalleryIdx] = useState(0);
   const [selectedQuantity, setSelectedQuantity] = useState(1);
-  const [pinCodeInput, setPinCodeInput] = useState('132116');
+  const [pinCodeInput, setPinCodeInput] = useState('');
   const [pinCodeChecked, setPinCodeChecked] = useState(false);
+  const [pinCodeError, setPinCodeError] = useState<string | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
   const [cartSuccessFeedback, setCartSuccessFeedback] = useState<string | null>(null);
   const [expandedFaqIndex, setExpandedFaqIndex] = useState<number | null>(0);
@@ -85,7 +86,7 @@ export const ProductDetailPage: React.FC = () => {
         </div>
         <h1 className="text-2xl font-bold text-slate-900 mb-2">Product Not Found</h1>
         <p className="text-slate-600 mb-6">
-          The requested agricultural item does not exist in the current AgriSense demo catalog or has been moved.
+          The requested agricultural item does not exist in the current AGRIPULSE demo catalog or has been moved.
         </p>
         <Link
           to="/store"
@@ -177,6 +178,11 @@ export const ProductDetailPage: React.FC = () => {
         <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
         <span className="text-slate-900 font-semibold truncate max-w-xs">{product.name}</span>
       </nav>
+
+      <div className="demo-workspace-banner" role="status">
+        <Info className="demo-workspace-icon" aria-hidden="true" />
+        <p><strong>Sample catalog entry — not a live product offer.</strong> Product identity, brand, certifications, stock, price, reviews, delivery, seller, warranty, and support details are illustrative and unverified. Cart and checkout actions are local simulations only.</p>
+      </div>
 
       {/* SUCCESS NOTIFICATION TOAST */}
       {cartSuccessFeedback && (
@@ -277,18 +283,18 @@ export const ProductDetailPage: React.FC = () => {
           <div className="grid grid-cols-3 gap-2 pt-2">
             <div className="flex flex-col items-center text-center p-2 rounded-xl bg-slate-50 border border-slate-100">
               <ShieldCheck className="w-5 h-5 text-emerald-700 mb-1" />
-              <span className="text-[11px] font-semibold text-slate-800">100% Genuine</span>
-              <span className="text-[10px] text-slate-500">Official Batch</span>
+              <span className="text-[11px] font-semibold text-slate-800">Demo listing</span>
+              <span className="text-[10px] text-slate-500">Not verified</span>
             </div>
             <div className="flex flex-col items-center text-center p-2 rounded-xl bg-slate-50 border border-slate-100">
               <Truck className="w-5 h-5 text-emerald-700 mb-1" />
-              <span className="text-[11px] font-semibold text-slate-800">Doorstep Farm</span>
-              <span className="text-[10px] text-slate-500">Fast Rural Transit</span>
+              <span className="text-[11px] font-semibold text-slate-800">Delivery preview</span>
+              <span className="text-[10px] text-slate-500">Carrier not connected</span>
             </div>
             <div className="flex flex-col items-center text-center p-2 rounded-xl bg-slate-50 border border-slate-100">
               <RotateCcw className="w-5 h-5 text-emerald-700 mb-1" />
-              <span className="text-[11px] font-semibold text-slate-800">7-Day Replace</span>
-              <span className="text-[10px] text-slate-500">Damaged / Defect</span>
+              <span className="text-[11px] font-semibold text-slate-800">Policy preview</span>
+              <span className="text-[10px] text-slate-500">No active guarantee</span>
             </div>
           </div>
         </div>
@@ -338,7 +344,7 @@ export const ProductDetailPage: React.FC = () => {
               <div className="flex items-center gap-1 text-amber-500 font-semibold">
                 <Star className="w-3.5 h-3.5 fill-current" />
                 <span>{product.rating || 4.7}</span>
-                <span className="text-slate-400 font-normal">({product.reviewCount || 38} reviews)</span>
+                <span className="text-slate-400 font-normal">({product.reviewCount || 38} demo reviews)</span>
               </div>
             </div>
           </div>
@@ -361,7 +367,7 @@ export const ProductDetailPage: React.FC = () => {
               )}
             </div>
             <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-500">
-              <span>Inclusive of all applicable agricultural GST & taxes</span>
+              <span>Indicative demo price; tax treatment is not verified</span>
               <span>•</span>
               <span className="text-emerald-700 font-medium">Free Demo Shipping on orders above ₹999</span>
             </div>
@@ -450,29 +456,44 @@ export const ProductDetailPage: React.FC = () => {
           <div className="p-3.5 bg-slate-50/80 rounded-xl border border-slate-200 text-xs space-y-2">
             <div className="flex items-center gap-2 text-slate-700 font-semibold">
               <MapPin className="w-4 h-4 text-emerald-700" />
-              <span>Check Delivery to Your Farm Location:</span>
+              <span>Check a sample delivery estimate (not carrier-confirmed):</span>
             </div>
             <div className="flex gap-2">
               <input
                 type="text"
                 value={pinCodeInput}
-                onChange={(e) => setPinCodeInput(e.target.value)}
+                onChange={(e) => {
+                  setPinCodeInput(e.target.value.replace(/\D/g, '').slice(0, 6));
+                  setPinCodeChecked(false);
+                  setPinCodeError(null);
+                }}
                 maxLength={6}
-                placeholder="Enter 6-digit PIN"
+                inputMode="numeric"
+                aria-label="Six-digit delivery PIN for a sample estimate"
+                placeholder="6-digit PIN"
                 className="px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-mono focus:outline-none focus:ring-1 focus:ring-emerald-600 w-36"
               />
               <button
                 type="button"
-                onClick={() => setPinCodeChecked(true)}
+                onClick={() => {
+                  if (!/^\d{6}$/.test(pinCodeInput)) {
+                    setPinCodeError('Enter a six-digit PIN to view the illustrative estimate. No carrier check is performed.');
+                    setPinCodeChecked(false);
+                    return;
+                  }
+                  setPinCodeError(null);
+                  setPinCodeChecked(true);
+                }}
                 className="bg-slate-800 hover:bg-slate-900 text-white px-3 py-1.5 rounded-lg font-medium transition-colors"
               >
                 Check
               </button>
             </div>
+            {pinCodeError && <p role="alert" className="text-rose-700 text-[11px]">{pinCodeError}</p>}
             {pinCodeChecked && (
-              <p className="text-emerald-800 font-medium text-[11px] flex items-center gap-1.5 pt-0.5">
-                <Check className="w-3.5 h-3.5 text-emerald-600" />
-                Delivery available to PIN {pinCodeInput}: {product.shippingEstimateDays}
+              <p role="status" className="text-amber-900 font-medium text-[11px] flex items-center gap-1.5 pt-0.5">
+                <Info className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                Illustrative estimate for PIN {pinCodeInput}: {product.shippingEstimateDays}. Not confirmed with a carrier.
               </p>
             )}
           </div>
@@ -586,32 +607,32 @@ export const ProductDetailPage: React.FC = () => {
         {/* Manufacturer & Seller Information */}
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-3.5 text-xs sm:text-sm">
           <h2 className="text-base font-bold text-slate-900 border-b border-slate-100 pb-2.5">
-            Manufacturer & Seller Information
+            Sample Manufacturer & Seller Details
           </h2>
           <div className="space-y-2 text-slate-700">
             <div>
               <span className="text-slate-500 font-medium">Manufacturer: </span>
-              <strong className="text-slate-900">{product.manufacturer?.name || product.brand}</strong>
+              <strong className="text-slate-900">{product.isDemoSeller ? `${product.brand} (sample, not verified)` : product.manufacturer?.name || product.brand}</strong>
             </div>
             <div>
-              <span className="text-slate-500 font-medium">Country of Origin: </span>
-              <span className="text-slate-900">{product.manufacturer?.originCountry || 'India'}</span>
+              <span className="text-slate-500 font-medium">Country of Origin (sample): </span>
+              <span className="text-slate-900">{product.isDemoSeller ? 'Not verified in this demo' : product.manufacturer?.originCountry || 'Not provided'}</span>
             </div>
             <div>
               <span className="text-slate-500 font-medium">Facility Address: </span>
-              <span className="text-slate-600">{product.manufacturer?.address || 'Agri Industrial Zone, India'}</span>
+              <span className="text-slate-600">{product.isDemoSeller ? 'Not provided in this demo' : product.manufacturer?.address || 'Not provided'}</span>
             </div>
             <div className="pt-2 border-t border-slate-100">
               <span className="text-slate-500 font-medium">Marketplace Seller: </span>
-              <strong className="text-emerald-800">{product.seller?.name || product.sellerName}</strong>
+              <strong className="text-emerald-800">{product.isDemoSeller ? `${product.sellerName} (demo record)` : product.seller?.name || product.sellerName}</strong>
             </div>
             <div>
               <span className="text-slate-500 font-medium">Return Policy: </span>
-              <span className="text-slate-700">{product.seller?.returnPolicy || '7 Days Replacement Policy'}</span>
+              <span className="text-slate-700">{product.isDemoSeller ? 'Illustrative only; no active return policy' : product.seller?.returnPolicy || 'Not provided'}</span>
             </div>
             <div>
               <span className="text-slate-500 font-medium">Support Contact: </span>
-              <span className="text-slate-600">{product.manufacturer?.supportContact || '1800-180-1551'}</span>
+              <span className="text-slate-600">{product.isDemoSeller ? 'Not connected in this prototype' : product.manufacturer?.supportContact || 'Not provided'}</span>
             </div>
           </div>
         </div>
@@ -619,26 +640,26 @@ export const ProductDetailPage: React.FC = () => {
         {/* Warranty & Service */}
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-3.5 text-xs sm:text-sm">
           <h2 className="text-base font-bold text-slate-900 border-b border-slate-100 pb-2.5">
-            Warranty & Quality Guarantee
+            Illustrative Warranty Information
           </h2>
           <div className="space-y-2 text-slate-700">
             <div>
               <span className="text-slate-500 font-medium">Warranty Period: </span>
               <strong className="text-slate-900">
-                {product.warranty?.durationMonths ? `${product.warranty.durationMonths} Months` : 'Quality Guaranteed'}
+                {product.isDemoSeller ? 'Not configured' : product.warranty?.durationMonths ? `${product.warranty.durationMonths} Months` : 'Not provided'}
               </strong>
             </div>
             <div>
               <span className="text-slate-500 font-medium">Warranty Type: </span>
-              <span className="text-slate-900">{product.warranty?.warrantyType || 'Standard Agritech Warranty'}</span>
+              <span className="text-slate-900">{product.isDemoSeller ? 'Sample data only' : product.warranty?.warrantyType || 'Not provided'}</span>
             </div>
             <div>
               <span className="text-slate-500 font-medium">What is Covered: </span>
-              <p className="text-slate-600 mt-0.5">{product.warranty?.coverage || 'Covers manufacturing and analytical defects.'}</p>
+              <p className="text-slate-600 mt-0.5">{product.isDemoSeller ? 'No warranty or quality guarantee is active in this demo.' : product.warranty?.coverage || 'Not provided'}</p>
             </div>
             <div className="pt-2 border-t border-slate-100">
               <span className="text-slate-500 font-medium">Claim Procedure: </span>
-              <p className="text-slate-600 mt-0.5">{product.warranty?.claimProcedure || 'Reach out to AgriSense support desk with your order ID.'}</p>
+              <p className="text-slate-600 mt-0.5">{product.isDemoSeller ? 'No support service is connected in this prototype.' : product.warranty?.claimProcedure || 'Not provided'}</p>
             </div>
           </div>
         </div>
@@ -648,8 +669,8 @@ export const ProductDetailPage: React.FC = () => {
       <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6">
         <div className="flex items-center justify-between border-b border-slate-100 pb-4 flex-wrap gap-3">
           <div>
-            <h2 className="text-lg font-bold text-slate-900">Customer Ratings & Farmer Reviews</h2>
-            <p className="text-xs text-slate-500">Verified feedback from farmers using this input</p>
+            <h2 className="text-lg font-bold text-slate-900">Sample Ratings & Demo Reviews</h2>
+            <p className="text-xs text-slate-500">Sample review content for interface preview; no purchase history is connected.</p>
           </div>
           <button
             type="button"
@@ -669,7 +690,7 @@ export const ProductDetailPage: React.FC = () => {
                 <Star key={i} className="w-4 h-4 fill-current" />
               ))}
             </div>
-            <span className="text-xs text-slate-500">Based on {product.reviewCount || 38} reviews</span>
+            <span className="text-xs text-slate-500">Sample count: {product.reviewCount || 38} (demo)</span>
           </div>
 
           <div className="flex-1 min-w-[200px] space-y-1.5 text-xs">
@@ -722,11 +743,12 @@ export const ProductDetailPage: React.FC = () => {
               <p className="text-xs text-slate-700 leading-relaxed">{rev.comment}</p>
               <div className="flex items-center gap-2 text-[11px] text-slate-500">
                 <span className="font-semibold text-slate-700">{rev.userName}</span>
-                {rev.verifiedPurchase && (
+                {rev.verifiedPurchase && !product.isDemoSeller && (
                   <span className="text-emerald-700 flex items-center gap-0.5 font-medium">
                     <CheckCircle2 className="w-3 h-3" /> Verified Purchase
                   </span>
                 )}
+                {product.isDemoSeller && <span className="text-slate-500 font-medium">Sample demo review · not verified</span>}
               </div>
             </div>
           ))}
@@ -855,19 +877,20 @@ export const ProductDetailPage: React.FC = () => {
             {reviewSubmittedSuccess ? (
               <div className="py-8 text-center text-emerald-800 space-y-2">
                 <CheckCircle2 className="w-12 h-12 mx-auto text-emerald-600 animate-bounce" />
-                <h4 className="text-base font-bold">Review Published!</h4>
-                <p className="text-xs text-slate-600">Your review has been saved to the product records.</p>
+                <h4 className="text-base font-bold">Demo review saved</h4>
+                <p className="text-xs text-slate-600">Saved only in your account workspace; it is not verified or published to a live marketplace.</p>
               </div>
             ) : (
               <form onSubmit={handleSubmitReview} className="space-y-3.5 text-xs sm:text-sm">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Your Name / Farm Name *</label>
+                  <label className="block font-semibold text-slate-700 mb-1">Demo display name *</label>
+                  <span className="text-[11px] text-slate-500">Use a fictional display name; this unverified draft is saved only to your account workspace.</span>
                   <input
                     type="text"
                     required
                     value={reviewForm.userName}
                     onChange={(e) => setReviewForm({ ...reviewForm, userName: e.target.value })}
-                    placeholder="e.g. Rajeshwar Singh Chaudhary"
+                    placeholder="e.g. Demo Farmer"
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-1 focus:ring-emerald-600"
                   />
                 </div>

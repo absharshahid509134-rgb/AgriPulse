@@ -231,7 +231,7 @@ export const NewsPage: React.FC = () => {
             News Feed Mode: Demo Agronomy & Policy Educational Articles (Offline Demo Ready)
           </p>
           <p className="mt-0.5 text-amber-900">
-            No live external news API is configured in this demo environment. Below are clearly labelled educational articles covering policy, crop advisories, weather preparedness, and market grading, with links to official reference portals. AgriPulse never invents breaking news, live market prices, or fake quotes.
+            No live external news API is configured in this demo environment. Below are clearly labelled educational articles covering policy, crop advisories, weather preparedness, and market grading, with links to official reference portals. AGRIPULSE never invents breaking news, live market prices, or fake quotes.
           </p>
         </div>
       </div>

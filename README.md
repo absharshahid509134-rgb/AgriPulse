@@ -1,77 +1,58 @@
-# AGRIPULSE — Intelligent Farm Digital Twin & Early Crop-Stress Detection System
+# AGRIPULSE — Intelligent Farm Digital Twin & Early Crop-Stress Detection
 
 **Tagline:** *Measure. Understand. Predict. Protect.*
 
-AGRIPULSE is a complete, responsive, offline-capable agricultural web platform built for modern Indian farmers. It features a split-screen login experience with a persistent demonstration farmer account, a personalized agricultural dashboard, a multi-farm digital twin workspace, agro-meteorological weather intelligence with demo fallback, a 52-term bilingual (English & हिंदी) agricultural dictionary, transparent crop symptom analysis, a 24-product agricultural e-commerce store with integer-paise cart calculations and simulated checkout, educational agricultural news, a national/state government schemes directory with an interactive eligibility questionnaire, and a context-aware floating AGRIPULSE AI assistant.
+AGRIPULSE is a responsive dual-portal prototype for Indian farmers and agricultural sellers. The React app preserves farmer workflows for farm/plot records, weather guidance, crop-health references, the bilingual dictionary, a sample marketplace, schemes/news, and Devices & IoT, alongside a seller workspace for catalog and order-flow concepts.
 
----
+> **Honest status:** This repository now includes an authenticated Express API, server-backed account workspaces, and a SQLite-backed device registry/pairing/telemetry prototype. It is still a development product, not a production agricultural, commerce, weather, AI, or hardware service. Real email verification/recovery, seller verification, cross-account marketplace fulfillment, shipping, payments/payouts, a live weather provider, a hosted AI model, physical device firmware, and a production IoT trust/broker service are not configured.
 
-## 1. Mandatory Demo Farmer Account
+## What is server-backed
 
-The application works out-of-the-box locally and after deployment **without requiring external API keys or database setup**:
+- **Accounts:** Farmer and seller registration and password login use the API. Passwords are scrypt-hashed. Session tokens are random, stored hashed server-side, and sent in an `HttpOnly`, `SameSite=Lax` cookie. Email verification and account recovery are not implemented.
+- **Workspaces:** Farm/profile/preferences and other account-scoped workspace state are saved as revisioned server snapshots. The development API uses SQLite (`.data/agripulse.sqlite` by default). Workspace writes reject secret-like fields and prevent stale revision overwrites.
+- **Devices:** Farmer-owned device metadata, derived status, gateway relationships, one-time pairing sessions, event history, and validated telemetry live in API-managed database tables—not browser `localStorage`. The UI never marks a device online manually. The local pairing/ingestion API is not connected to physical hardware and must not be treated as proof of installation.
+- **Development demo:** Clearly labelled launchers call a development-only API route. Demo content is stored in a shared local demo workspace and is not a production account. Demo launch is disabled with `NODE_ENV=production` or `ALLOW_DEMO_SESSIONS=false`.
 
-- **Email:** `farmer.demo@AgriPulse.in`
-- **Password:** `Farm@2026!`
+Read [`docs/DEVICE_API_CONTRACTS.md`](docs/DEVICE_API_CONTRACTS.md) for implemented routes and security/deployment limitations. The original product scope is retained in [`docs/BLUEPRINT.md`](docs/BLUEPRINT.md).
 
-You can also click **"Use Demo Account (Sign In Now)"** on the `/login` page to sign in immediately.
-- Your authenticated session is persisted in `localStorage` (`AgriPulse:v1:session`) and remains active across page refreshes and browser restarts until you explicitly click **Sign Out**.
-- Logging out clears only the authentication session while preserving your saved farms, crops, observations, cart items, preferences, and placed demo orders.
+## Data provenance and safety
 
----
+- Manual farmer observations, sample/demo records, physical sensor telemetry, and weather-provider data are separate sources and should remain visibly labelled.
+- The current build has **no physical rain-gauge or rainfall-mm sensor**. Forecast precipitation is not measured farm rainfall; unavailable readings are not replaced with zero.
+- With no weather endpoint configured, the app uses clearly labelled sample forecasts. The optional `VITE_WEATHER_API_URL` is a frontend endpoint hook, not a bundled or verified provider integration. Never put private provider credentials in a `VITE_*` variable.
+- The floating AGRIPULSE assistant uses local rule-based/reference responses; it is not a hosted generative AI service or individualized agronomic diagnosis.
+- The marketplace catalog, checkout/order flows, seller ratings, invoices, and settlement screens are demonstrations. Account edits can be persisted in a workspace, but do not publish listings to a shared storefront, create cross-account fulfillment, arrange shipment, charge money, verify sellers, or transfer funds.
+- Never enter network passwords, provisioning tokens, private keys, SIM PINs, bank credentials, or real payment details in the development demo. The demo workspace is shared and its local database is not production-grade storage.
 
-## 2. Official Brand Logo
+## Portals and routes
 
-- The `<AgriPulseLogo />` / `<AgriSenseLogo />` component renders the built-in vector brand emblem with consistent proportions and legibility across the Login screens, Sidebar, Mobile Drawer, and Dashboard.
+- **Farmer:** `/home`, `/farm`, `/weather`, `/devices`, `/devices/:deviceId`, `/dictionary`, `/disease`, `/store`, `/cart`, `/checkout`, `/orders`, `/wishlist`, `/offers`, `/news`, `/schemes`, `/account`
+- **Seller:** `/seller` and `/seller/dashboard`
+- **Authentication:** `/farmer/login`, `/farmer/signup`, `/login`, `/seller/login`, `/signup`, `/seller/signup`
 
----
+Seller accounts are restricted to the seller role. Portal switching is available only to the development demo account, which has both roles.
 
-## 3. Local Development & Build Instructions
+## Local development
+
+**Requirements:** Node.js 22 or newer and npm.
 
 ```bash
-# 1. Install dependencies
 npm install
-
-# 2. Start the local development server (bound to 0.0.0.0:5173)
 npm run dev
-
-# 3. Type-check and build for production
-npm run build
-
-# 4. Preview the production build locally
-npm run preview
 ```
 
----
+`npm run dev` starts the API on `0.0.0.0:4000` and Vite on `0.0.0.0:3000`; Vite proxies `/api` to the API. Set `AGRIPULSE_API_PROXY` if the API runs at another address. The API accepts `API_HOST`, `API_PORT`, `AGRIPULSE_DB_PATH`, `DEVICE_ONLINE_WINDOW_SECONDS`, and `ALLOW_DEMO_SESSIONS` environment settings.
 
-## 4. Deployment & SPA Route Rewrite Configuration
+For production builds and verification:
 
-The built static output in `dist/` is ready for static hosting platforms:
-- **Vercel:** Configured via `vercel.json` (`rewrites` all routes to `/index.html`).
-- **Netlify / Cloudflare Pages:** Configured via `public/_redirects` (`/* /index.html 200`).
+```bash
+npm run lint
+npm test
+npm run build
+```
 
-Direct navigation or page refresh on any nested route (`/home`, `/farm`, `/weather`, `/dictionary`, `/disease`, `/store`, `/cart`, `/orders`, `/news`, `/schemes`, `/account`) will resolve cleanly without 404 errors.
+`npm run preview` serves the static frontend only; run the API separately when testing authenticated features. SQLite database files, build output, and environment files are excluded from Git.
 
----
+## Before any production deployment
 
-## 5. Optional Environment Variables (`.env.example`)
-
-All external integrations are optional. Copy `.env.example` to `.env` only when connecting live services. **Never expose private service-role keys or secret LLM keys in client-side `VITE_*` variables.**
-
-- `VITE_WEATHER_API_URL` / `VITE_WEATHER_API_KEY`: Optional live weather proxy endpoint.
-- `VITE_AI_BACKEND_ENDPOINT`: Optional backend proxy for LLM chat and crop vision analysis.
-- `VITE_NEWS_API_ENDPOINT`: Optional verified agricultural news feed endpoint.
-- `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`: Optional Supabase project URL and public anon key (with Row-Level Security enabled).
-
----
-
-## 6. Acceptance Test Checklist
-
-- [x] **Authentication:** Unauthenticated requests redirect to `/login`; signing in with `farmer.demo@AgriPulse.in` / `Farm@2026!` redirects to `/home`; session persists across refresh; invalid credentials show clear error feedback; signing out redirects to `/login`.
-- [x] **Home Dashboard (`/home`):** Time-aware greeting, active farm switcher, 6 real calculated summary cards, farm condition overview (explicitly marking hardware sensors as *Not Connected / Last Recorded*), weather preview, priority alerts, interactive farm activity calendar (create, edit, complete, delete), Recharts visualizations, and 7 quick actions.
-- [x] **Farm Management (`/farm`):** Multi-farm & named plot registration, regional Bigha-to-Acre-to-Hectare land unit converter, crop stage tracker (supporting Indian crops + custom names), timestamped field observations, searchable historical log with CSV export, and farm location panel.
-- [x] **Weather Intelligence (`/weather`):** State/District/Block location selector, optional browser geolocation with permission prompt, current weather, hourly & 7-day forecast, trigger-explained cautious farming suggestions, manual rainfall log, and simulated API failure + retry workflow.
-- [x] **Agricultural Dictionary (`/dictionary`):** 52 farmer-friendly terms across all 13 categories, instant search, A–Z filter, category filter, bookmarks, recently viewed terms, related-term navigation, and English / हिंदी language selector.
-- [x] **Crop Disease & Symptom Analysis (`/disease`):** Text and validated image symptom submission, transparent *Demo symptom guidance* labelling, candidate causes, distinguishing checks, immediate inspection steps, expert consultation guidance, and status tracking (*Possible issue*, *Needs inspection*, *Expert confirmed*).
-- [x] **Agricultural Store (`/store`, `/cart`, `/orders`):** 24 realistic demo products across 10 categories, search, category/crop/price/availability filters, sorting, grid/list views, product detail view, wishlist, integer-paise shopping cart with demo promo codes (`KISAN10`, `RABISEASON`), validated Indian PIN & mobile checkout, simulated COD & UPI workflows, and persistent order management with cancellation for eligible orders.
-- [x] **Agricultural News (`/news`) & Government Schemes (`/schemes`):** 9 news categories with bookmarks, detail view, and share action; 10 national & state government schemes with `.gov.in` / `.nic.in` links and an interactive *Potentially relevant schemes* questionnaire.
-- [x] **Floating AGRIPULSE AI Chatbox & Account Settings (`/account`):** Context-aware assistant using actual saved farm records, plus full profile/unit/notification preferences and confirmed demo data reset.
+Use a managed database with backup/restore and migrations, TLS, a production session/cookie policy, account recovery and email verification, robust monitoring and audit review, and a reviewed authorization model. Hardware rollout additionally needs device attestation and credential rotation, a trusted provisioning workflow, authenticated transport (such as MQTT over TLS or HTTPS), signed/validated firmware, telemetry abuse controls, and real-device acceptance tests. Commerce, weather, and AI require their own vetted server-side integrations. Do not describe the current local API or UI prototype as production-ready.

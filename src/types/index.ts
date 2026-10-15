@@ -50,6 +50,35 @@ export interface AuthSession {
   loggedInAt: string;
 }
 
+export interface FarmerRegistrationRequest {
+  name: string;
+  email: string;
+  password: string;
+  mobile?: string;
+  state?: string;
+  district?: string;
+  village?: string;
+  primaryCrop?: string;
+  landArea?: string | number;
+}
+
+export interface SellerRegistrationRequest {
+  businessName: string;
+  tradeName?: string;
+  contactPerson: string;
+  email: string;
+  password: string;
+  mobile?: string;
+  category: string;
+  gstin?: string;
+  licenseNumber?: string;
+  state?: string;
+  district?: string;
+  city?: string;
+  address?: string;
+  pincode?: string;
+}
+
 export interface UserPreferences {
   language: LanguageCode;
   preferredAreaUnit: AreaUnit;
@@ -261,6 +290,142 @@ export interface WeatherSnapshot {
     triggerCondition: string;
   }[];
 }
+
+export type DeviceType = 'sensor_node' | 'lora_gateway';
+
+export type DeviceStatus =
+  | 'draft'
+  | 'pending_pairing'
+  | 'pending_gateway_assignment'
+  | 'online'
+  | 'offline'
+  | 'attention_required'
+  | 'retired';
+
+export type TelemetrySource = 'physical_sensor' | 'weather_api' | 'manual_observation' | 'demo';
+
+export type InstalledSensorType =
+  | 'soil_moisture'
+  | 'soil_temperature'
+  | 'air_temperature_humidity'
+  | 'light'
+  | 'soil_ph'
+  | 'soil_npk'
+  | 'battery_voltage'
+  | 'standing_water';
+
+export type DevicePowerSource = 'solar_battery' | 'battery' | 'mains' | 'other';
+export type DeviceBackhaulType = 'wifi' | 'ethernet' | 'cellular' | 'other';
+export type SensorCalibrationStatus = 'not_calibrated' | 'calibration_recorded' | 'needs_review';
+
+/**
+ * Browser-side device records are demo metadata only. In production, the API and
+ * database own device identity, pairing, status, telemetry, and audit history.
+ */
+export interface IoTDevice {
+  id: string;
+  ownerUserId: string;
+  farmId: string;
+  plotId?: string;
+  type: DeviceType;
+  name: string;
+  serialNumber?: string;
+  locationLabel: string;
+  state?: string;
+  district?: string;
+  locality?: string;
+  latitude?: number;
+  longitude?: number;
+  installedAt?: string;
+  status: DeviceStatus;
+  gatewayId?: string;
+  installedSensors?: InstalledSensorType[];
+  backhaulType?: DeviceBackhaulType;
+  powerSource?: DevicePowerSource;
+  samplingIntervalMinutes?: number;
+  communicationProfile?: string;
+  calibrationStatus?: SensorCalibrationStatus;
+  calibrationDate?: string;
+  calibrationNotes?: string;
+  coverageNotes?: string;
+  notes?: string;
+  lastSeenAt?: string;
+  isDemoRecord: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TelemetryReading {
+  id: string;
+  deviceId: string;
+  farmId: string;
+  sensorType: InstalledSensorType;
+  value: number;
+  unit: string;
+  measuredAt: string;
+  receivedAt: string;
+  source: 'physical_sensor' | 'demo';
+  quality?: 'valid' | 'suspect' | 'invalid';
+}
+
+export type DeviceEventType =
+  | 'registered'
+  | 'metadata_updated'
+  | 'gateway_assigned'
+  | 'pairing_requested'
+  | 'pairing_succeeded'
+  | 'heartbeat'
+  | 'fault'
+  | 'provisioning_failed'
+  | 'retired';
+
+export interface DeviceEvent {
+  id: string;
+  deviceId: string;
+  type: DeviceEventType;
+  title: string;
+  description: string;
+  occurredAt: string;
+  source: 'demo' | 'backend';
+}
+
+export interface DeviceRegistrationInput {
+  farmId: string;
+  plotId?: string;
+  type: DeviceType;
+  name: string;
+  serialNumber?: string;
+  locationLabel: string;
+  state?: string;
+  district?: string;
+  locality?: string;
+  latitude?: number;
+  longitude?: number;
+  installedAt?: string;
+  gatewayId?: string;
+  installedSensors?: InstalledSensorType[];
+  backhaulType?: DeviceBackhaulType;
+  powerSource?: DevicePowerSource;
+  samplingIntervalMinutes?: number;
+  communicationProfile?: string;
+  calibrationStatus?: SensorCalibrationStatus;
+  calibrationDate?: string;
+  calibrationNotes?: string;
+  coverageNotes?: string;
+  notes?: string;
+}
+
+export type DeviceMetadataPatch = Partial<Pick<DeviceRegistrationInput,
+  'name' | 'locationLabel' | 'state' | 'district' | 'locality' |
+  'calibrationStatus' | 'calibrationNotes' | 'coverageNotes'
+>> & {
+  plotId?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  installedAt?: string | null;
+  calibrationDate?: string | null;
+  notes?: string | null;
+};
 
 export interface RainfallLog {
   id: string;
@@ -574,7 +739,7 @@ export interface ChatMessage {
     label: string;
     route: string;
   }[];
-  modeLabel?: 'Knowledge Retrieval & Demo Guidance' | 'Demo Rule-Based Guidance' | 'Connected AI Service';
+  modeLabel?: 'Knowledge Retrieval & Demo Guidance' | 'Demo Rule-Based Guidance' | 'Connected AI Service' | 'Device Registry · Rule-Based Guidance';
 }
 
 // ============================================================================

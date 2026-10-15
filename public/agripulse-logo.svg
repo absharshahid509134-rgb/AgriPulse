@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="AGRIPULSE sprout logo">
+  <defs>
+    <linearGradient id="field" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#347a46"/><stop offset="1" stop-color="#173e29"/></linearGradient>
+    <radialGradient id="glow" cx="52%" cy="30%" r="78%"><stop offset="0" stop-color="#9cd46d" stop-opacity=".38"/><stop offset="1" stop-color="#9cd46d" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="100" fill="url(#field)"/>
+  <rect width="512" height="512" rx="100" fill="url(#glow)"/>
+  <g fill="#f6f6e9">
+    <path d="M256 86c-43 58-66 114-66 164 0 48 25 78 66 78s66-30 66-78c0-50-23-106-66-164Z"/>
+    <path d="M230 325c-74 11-128-8-164-57-24-32-21-67-1-82 34-24 107 18 165 139Z"/>
+    <path d="M282 325c74 11 128-8 164-57 24-32 21-67 1-82-34-24-107 18-165 139Z"/>
+  </g>
+  <g fill="none" stroke="#244e31" stroke-width="11" stroke-linecap="round">
+    <path d="M256 314V188M225 312l-99-79M287 312l99-79"/>
+  </g>
+  <g fill="none" stroke="#f6f6e9" stroke-width="16" stroke-linecap="round">
+    <path d="M108 383c44-18 74 19 122 19s79-37 127-37 65 26 89 23"/>
+    <path d="M108 423c44-18 74 19 122 19s79-37 127-37 65 26 89 23"/>
+  </g>
+</svg>
