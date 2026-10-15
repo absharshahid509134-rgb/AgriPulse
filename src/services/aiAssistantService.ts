@@ -11,6 +11,8 @@ import {
   WeatherSnapshot,
 } from '../types';
 import { formatPaiseToINR } from '../utils/formatters';
+import { SEED_100_CROP_DISEASES } from '../data/seed100CropDiseases';
+import { getDiseaseDocumentary } from '../data/diseaseDocumentaryService';
 
 export interface AssistantContext {
   profile: FarmerProfile;
@@ -41,6 +43,79 @@ export async function generateAssistantReply(
   const latestObs = activeFarm
     ? ctx.observations.filter((o) => o.farmId === activeFarm.id)
     : ctx.observations;
+
+  // 0. Check if query asks about a specific disease from the 100 Crop Diseases Encyclopedia
+  const matchedDiseaseItem = SEED_100_CROP_DISEASES.find(
+    (d) =>
+      q.includes(d.disease.toLowerCase()) ||
+      q.includes(d.scientificName.toLowerCase().split(' ')[0])
+  );
+
+  if (matchedDiseaseItem) {
+    const doc = getDiseaseDocumentary(matchedDiseaseItem);
+
+    if (q.includes('symptom') || q.includes('sign') || q.includes('identif')) {
+      return {
+        sender: 'assistant',
+        modeLabel: 'Knowledge Retrieval & Demo Guidance',
+        contextBadge: `${doc.diseaseName} (${matchedDiseaseItem.crop})`,
+        sourceCitations: doc.referencesAndSources.slice(0, 2),
+        text: `[Verified Plant Pathology Monograph: ${doc.diseaseName}]\n• Host Crop: ${matchedDiseaseItem.crop} (${matchedDiseaseItem.cropGroup})\n• Causal Pathogen: ${doc.causalOrganism} (${matchedDiseaseItem.pathogenType})\n• Primary Field Symptoms: ${doc.symptomsAndSigns}\n• Diagnostic Confirmation: ${doc.diagnosisAndIdentification}\n• Favourable Weather Trigger: ${doc.favourableConditions}`,
+        suggestedLinks: [
+          { label: 'View Full Disease Infographic', route: '/disease' },
+          { label: 'Browse Crop Protection in Store', route: '/store' },
+        ],
+      };
+    }
+
+    if (
+      q.includes('treat') ||
+      q.includes('chemical') ||
+      q.includes('biological') ||
+      q.includes('control') ||
+      q.includes('spray') ||
+      q.includes('remed') ||
+      q.includes('spread')
+    ) {
+      return {
+        sender: 'assistant',
+        modeLabel: 'Knowledge Retrieval & Demo Guidance',
+        contextBadge: `${doc.diseaseName} — Treatment & IDM`,
+        sourceCitations: doc.referencesAndSources.slice(0, 2),
+        text: `[Integrated Management Protocol: ${doc.diseaseName}]\n• Immediate Control & Threshold: ${doc.controlAndTreatment}\n• Biological Control: ${doc.biologicalControl}\n• Chemical Control (Label-Guided): ${doc.chemicalControl}\n• Core IDM Strategy: ${doc.integratedDiseaseManagement}\n\nSafety Note: Always verify dosage and waiting period (PHI) on the official CIBRC product label or consult your local KVK officer.`,
+        suggestedLinks: [
+          { label: 'Browse Bio-Inputs & Fungicides in Store', route: '/store' },
+          { label: 'Check Spray Weather Window', route: '/weather' },
+        ],
+      };
+    }
+
+    if (q.includes('resistant') || q.includes('variet') || q.includes('prevent') || q.includes('sowing')) {
+      return {
+        sender: 'assistant',
+        modeLabel: 'Knowledge Retrieval & Demo Guidance',
+        contextBadge: `${doc.diseaseName} — Prevention & Varieties`,
+        sourceCitations: doc.referencesAndSources.slice(0, 2),
+        text: `[Prevention & Host Resistance: ${doc.diseaseName}]\n• Recommended Resistant Varieties: ${doc.resistantVarieties}\n• Pre-Sowing & Cultural Prevention: ${doc.prevention}\n• Season of Occurrence: ${doc.seasonOfOccurrence}\n• Mode of Spread to Block: ${doc.modeOfTransmission}`,
+        suggestedLinks: [
+          { label: 'Browse Certified Seeds in Store', route: '/store' },
+          { label: 'Plan Crop in Farm Digital Twin', route: '/farm' },
+        ],
+      };
+    }
+
+    return {
+      sender: 'assistant',
+      modeLabel: 'Knowledge Retrieval & Demo Guidance',
+      contextBadge: `${doc.diseaseName} (#${doc.id})`,
+      sourceCitations: doc.referencesAndSources.slice(0, 2),
+      text: `[Plain-Language Overview: ${doc.diseaseName} in ${matchedDiseaseItem.crop}]\n• What It Is: ${doc.definition}\n• Causal Pathogen: ${doc.causalOrganism} (${matchedDiseaseItem.pathogenType})\n• How It Spreads: ${doc.modeOfTransmission}\n• Key Field Symptoms: ${doc.symptomsAndSigns}\n• Recommended IDM & Treatment: ${doc.integratedDiseaseManagement}\n• Resistant Varieties: ${doc.resistantVarieties}`,
+      suggestedLinks: [
+        { label: 'Explore 100 Crop Diseases', route: '/disease' },
+        { label: 'Browse Crop Protection Store', route: '/store' },
+      ],
+    };
+  }
 
   // 1. Farm check / "what should I check on my farm today?"
   if (

@@ -19,10 +19,9 @@ You can also click **"Use Demo Account (Sign In Now)"** on the `/login` page to 
 
 ---
 
-## 2. Custom Logo Integration
+## 2. Official Brand Logo
 
-- Place your official logo file at `public/logo.png` or upload it directly in the UI (**Login Page → Upload Logo** or **Account & Settings → Upload Logo File**).
-- The `<AgriPulseLogo />` component preserves original proportions and legibility across the Login screen, Sidebar, Mobile Drawer, and Dashboard, and automatically renders a clean AGRIPULSE text-logo placeholder if no external image file is present.
+- The `<AgriPulseLogo />` / `<AgriSenseLogo />` component renders the built-in vector brand emblem with consistent proportions and legibility across the Login screens, Sidebar, Mobile Drawer, and Dashboard.
 
 ---
 

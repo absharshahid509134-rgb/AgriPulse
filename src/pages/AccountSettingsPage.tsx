@@ -7,10 +7,8 @@ import {
   LogOut,
   CheckCircle2,
   ShieldAlert,
-  Upload,
   Bell,
   Database,
-  Trash2,
 } from 'lucide-react';
 import {
   DEMO_ACCOUNT_EMAIL,
@@ -27,8 +25,6 @@ export const AccountSettingsPage: React.FC = () => {
     farms,
     logout,
     resetAllDemoData,
-    customLogoUrl,
-    setCustomLogoUrl,
   } = useAgriPulse();
 
   const navigate = useNavigate();
@@ -96,21 +92,6 @@ export const AccountSettingsPage: React.FC = () => {
 
     setSavedBanner('Saved farmer profile and platform preferences to browser storage.');
     setTimeout(() => setSavedBanner(null), 4000);
-  };
-
-  const handleLogoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/') || file.size > 2 * 1024 * 1024) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        setCustomLogoUrl(reader.result);
-        setSavedBanner('Updated AGRIPULSE brand logo across the platform.');
-        setTimeout(() => setSavedBanner(null), 4000);
-      }
-    };
-    reader.readAsDataURL(file);
   };
 
   const handleConfirmReset = () => {
@@ -413,41 +394,12 @@ export const AccountSettingsPage: React.FC = () => {
             ))}
           </section>
 
-          {/* Brand Logo Upload & Browser Storage Disclosure */}
+          {/* Browser Storage Disclosure */}
           <section className="lg:col-span-6 bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
             <h3 className="text-base font-bold text-slate-900 pb-2 border-b border-slate-100 flex items-center gap-2">
               <Database className="w-4 h-4 text-forest-700" />
-              <span>Custom AGRIPULSE Logo & Local Storage Management</span>
+              <span>Local Storage & Data Management</span>
             </h3>
-
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
-              <p className="font-bold text-slate-800">Upload Your Supplied AGRIPULSE Logo</p>
-              <p className="text-slate-600">
-                Upload your official logo file (PNG, SVG, or WebP) to display it across the Login Screen, Sidebar, and Dashboard while preserving its original proportions.
-              </p>
-              <div className="flex flex-wrap items-center gap-2 pt-1">
-                <label className="cursor-pointer inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-forest-800 hover:bg-forest-900 text-white font-bold">
-                  <Upload className="w-3.5 h-3.5" />
-                  <span>Upload Logo File</span>
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg,image/svg+xml,image/webp"
-                    onChange={handleLogoFileChange}
-                    className="sr-only"
-                  />
-                </label>
-                {customLogoUrl && (
-                  <button
-                    type="button"
-                    onClick={() => setCustomLogoUrl(null)}
-                    className="inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-white border border-slate-300 text-slate-700 font-semibold"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span>Revert to Default Logo</span>
-                  </button>
-                )}
-              </div>
-            </div>
 
             <div className="p-3.5 rounded-xl bg-amber-50/80 border border-amber-200 text-amber-950 space-y-1.5">
               <p className="font-bold flex items-center gap-1.5">
