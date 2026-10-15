@@ -37,12 +37,15 @@ import { DemoOrder, OrderStatus, ProductCategory, StoreProduct } from '../types'
 
 const PRODUCT_CATEGORIES: ProductCategory[] = [
   'Seeds and planting material',
-  'Crop nutrition and fertilizers',
-  'Crop protection and bio-inputs',
-  'Farm machinery and implements',
-  'Micro-irrigation and hardware',
-  'Precision testing instruments',
-  'Farm safety and protective equipment',
+  'Fertilizers and soil nutrients',
+  'Crop protection products',
+  'Organic farming inputs',
+  'Soil testing and farm-monitoring kits',
+  'Irrigation equipment',
+  'Sprayers and farm tools',
+  'Hand tools and accessories',
+  'Farm safety equipment',
+  'Harvesting and storage supplies',
 ];
 
 export const SellerPortalPage: React.FC = () => {
@@ -152,12 +155,16 @@ export const SellerPortalPage: React.FC = () => {
       name: newProdName.trim(),
       category: newProdCategory,
       brand: newProdBrand.trim(),
+      isSampleBrand: true,
       packSize: newProdPackSize.trim(),
       pricePaise,
       mrpPaise,
       stockCount,
       availability: stockCount > 0 ? 'In Stock' : 'Out of Stock',
       sellerName: `${sellerProfile.businessName} (Demo Seller)`,
+      isDemoSeller: true,
+      compatibleCrops: ['Wheat (गेहूं)', 'Rice / Paddy (धान)', 'Mustard (सरसों)', 'Vegetables'],
+      seasonTag: 'All Season',
       shortDescription:
         newProdShortDesc.trim() ||
         `High-quality certified ${newProdName.trim()} supplied by ${sellerProfile.businessName}.`,

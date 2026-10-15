@@ -18,7 +18,6 @@ import {
   Truck,
   Copy,
   Check,
-  Upload,
 } from 'lucide-react';
 import { AgriPulseLogo } from '../components/AgriPulseLogo';
 import {
@@ -35,8 +34,6 @@ export const LoginPage: React.FC = () => {
     loginWithCredentials,
     loginAsSellerDemo,
     loginAsFarmerDemo,
-    customLogoUrl,
-    setCustomLogoUrl,
   } = useAgriPulse();
 
   const navigate = useNavigate();
@@ -135,19 +132,6 @@ export const LoginPage: React.FC = () => {
     setTimeout(() => setCopiedField(null), 1600);
   };
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/') || file.size > 2 * 1024 * 1024) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        setCustomLogoUrl(reader.result);
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-
   return (
     <div className="min-h-screen bg-slate-900 flex flex-col justify-between text-slate-100">
       {/* Top Header */}
@@ -160,19 +144,6 @@ export const LoginPage: React.FC = () => {
           </span>
         </div>
         <div className="flex items-center gap-3 text-xs">
-          <label
-            title="Upload custom logo"
-            className="cursor-pointer hidden md:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-forest-900 hover:bg-forest-800 text-forest-200 hover:text-white border border-forest-700 transition"
-          >
-            <Upload className="w-3.5 h-3.5 text-emerald-400" />
-            <span>{customLogoUrl ? 'Change Logo' : 'Upload Logo'}</span>
-            <input
-              type="file"
-              accept="image/png,image/jpeg,image/svg+xml,image/webp"
-              onChange={handleLogoUpload}
-              className="sr-only"
-            />
-          </label>
           <Link
             to="/farmer/login"
             className="px-3 py-1.5 rounded-xl bg-forest-900 hover:bg-forest-800 text-emerald-300 hover:text-emerald-200 border border-emerald-500/30 transition flex items-center gap-1.5 font-medium"
@@ -271,19 +242,30 @@ export const LoginPage: React.FC = () => {
             <div className="mb-6 pb-6 border-b border-slate-100">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-bold uppercase tracking-wider text-emerald-800">
-                  Seller Demonstration Access
+                  Instant 1-Click Demo Portals
                 </span>
-                <span className="text-[11px] text-slate-500 font-medium">1-Click Fast Portal</span>
+                <span className="text-[11px] text-slate-500 font-medium">No password required</span>
               </div>
-              <button
-                type="button"
-                onClick={handleInstantDemoSeller}
-                disabled={isSubmitting}
-                className="w-full inline-flex items-center justify-center gap-2.5 py-3.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md transition transform active:scale-98"
-              >
-                <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
-                <span>1-Click Demo Seller Sign In & Launch Portal</span>
-              </button>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <button
+                  type="button"
+                  onClick={handleInstantDemoFarmer}
+                  disabled={isSubmitting}
+                  className="w-full inline-flex items-center justify-center gap-2 py-3.5 px-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm shadow-md transition transform active:scale-98"
+                >
+                  <Sprout className="w-4 h-4 text-amber-300 shrink-0" />
+                  <span>Launch Farmer Portal</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleInstantDemoSeller}
+                  disabled={isSubmitting}
+                  className="w-full inline-flex items-center justify-center gap-2 py-3.5 px-3.5 rounded-2xl bg-forest-950 hover:bg-forest-900 text-white font-bold text-xs sm:text-sm shadow-md transition transform active:scale-98"
+                >
+                  <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>Launch Seller Portal</span>
+                </button>
+              </div>
             </div>
 
             {/* Standard Seller Sign In Form */}

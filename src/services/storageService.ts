@@ -53,7 +53,6 @@ export const STORAGE_KEYS = {
   ORDERS: 'AgriPulse:v1:orders',
   NEWS_BOOKMARKS: 'AgriPulse:v1:newsBookmarks',
   CHAT_HISTORY: 'AgriPulse:v1:chatHistory',
-  CUSTOM_LOGO: 'AgriPulse:v1:customLogo',
   RECOVERY_NOTICE: 'AgriPulse:v1:recoveryNotice',
 } as const;
 
@@ -219,7 +218,6 @@ export function loadInitialDataSnapshot() {
     INITIAL_CHAT_MESSAGES,
     isArray
   );
-  const customLogo = safeReadStorage<string | null>(STORAGE_KEYS.CUSTOM_LOGO, null);
 
   return {
     profile,
@@ -242,7 +240,6 @@ export function loadInitialDataSnapshot() {
     orders,
     newsBookmarks,
     chatHistory,
-    customLogo,
   };
 }
 

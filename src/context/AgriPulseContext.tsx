@@ -84,8 +84,6 @@ interface AgriPulseContextValue {
   // Profile & Preferences (Farmer)
   profile: FarmerProfile;
   updateProfile: (updated: FarmerProfile) => void;
-  customLogoUrl: string | null;
-  setCustomLogoUrl: (dataUrl: string | null) => void;
   resetAllDemoData: () => void;
 
   // Farms, Plots, Crops, Observations, Activities
@@ -219,9 +217,6 @@ export const AgriPulseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [orders, setOrders] = useState<DemoOrder[]>(initialSnapshot.orders);
   const [newsBookmarks, setNewsBookmarks] = useState<string[]>(initialSnapshot.newsBookmarks);
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>(initialSnapshot.chatHistory);
-  const [customLogoUrl, setCustomLogoUrlState] = useState<string | null>(
-    initialSnapshot.customLogo
-  );
 
   const [activeFarmId, setActiveFarmIdState] = useState<string>(() => {
     const defId = initialSnapshot.profile.preferences.defaultFarmId;
@@ -513,11 +508,6 @@ export const AgriPulseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const next = orders.map((o) => (o.id === orderId ? { ...o, orderStatus: status } : o));
     setOrders(next);
     safeWriteStorage(STORAGE_KEYS.ORDERS, next);
-  };
-
-  const setCustomLogoUrl = (dataUrl: string | null) => {
-    setCustomLogoUrlState(dataUrl);
-    safeWriteStorage(STORAGE_KEYS.CUSTOM_LOGO, dataUrl);
   };
 
   const resetAllDemoData = () => {
@@ -1077,8 +1067,6 @@ export const AgriPulseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     updateOrderStatus,
     profile,
     updateProfile,
-    customLogoUrl,
-    setCustomLogoUrl,
     resetAllDemoData,
     farms,
     activeFarmId,
