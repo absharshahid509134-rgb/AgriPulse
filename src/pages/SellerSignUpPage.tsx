@@ -13,6 +13,7 @@ import {
   FileCheck,
   Sprout,
   Users,
+  ArrowLeft,
 } from 'lucide-react';
 import { AgriPulseLogo } from '../components/AgriPulseLogo';
 import { useAgriPulse } from '../context/AgriPulseContext';
@@ -129,6 +130,13 @@ export const SellerSignUpPage: React.FC = () => {
             Already Registered? Sign In
           </Link>
         </div>
+          <Link
+            to="/"
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-forest-100 hover:text-white bg-forest-900 hover:bg-forest-800 border border-forest-700 font-medium transition"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Website home</span>
+          </Link>
       </header>
 
       {/* Main Content */}
