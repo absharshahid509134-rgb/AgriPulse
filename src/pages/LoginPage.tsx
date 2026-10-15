@@ -16,6 +16,7 @@ import {
   TrendingUp,
   Package,
   Truck,
+  ArrowLeft,
 } from 'lucide-react';
 import { AgriPulseLogo } from '../components/AgriPulseLogo';
 import { useAgriPulse, DEMO_MODE_ENABLED } from '../context/AgriPulseContext';
@@ -142,6 +143,13 @@ export const LoginPage: React.FC = () => {
             Register Seller Account
           </Link>
         </div>
+          <Link
+            to="/"
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-forest-800 hover:text-forest-950 hover:bg-forest-50 border border-transparent hover:border-forest-200 font-medium transition"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Website home</span>
+          </Link>
       </header>
 
       {/* Main Split Section */}

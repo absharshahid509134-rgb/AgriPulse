@@ -10,6 +10,7 @@ import {
   AlertCircle,
   HelpCircle,
   Sparkles,
+  ArrowLeft,
   ArrowRight,
   ShieldCheck,
   Store,
@@ -124,6 +125,13 @@ export const FarmerLoginPage: React.FC = () => {
           </span>
         </div>
         <div className="flex items-center gap-3 text-xs">
+          <Link
+            to="/"
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-forest-800 hover:text-forest-950 hover:bg-forest-50 border border-transparent hover:border-forest-200 font-medium transition"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Website home</span>
+          </Link>
           {DEMO_MODE_ENABLED && <button
             type="button"
             onClick={handleInstantDemoSeller}
@@ -155,8 +163,9 @@ export const FarmerLoginPage: React.FC = () => {
           </h1>
 
           <p className="text-base text-forest-800 leading-relaxed">
-            Monitor crop stress across your plots, study 100 crop diseases with 25-heading pathology
-            dossiers, get hyper-local weather alerts, and purchase certified agricultural inputs.
+            Track each plot's readings, observations and crop stage; screen for early stress against
+            transparent reference bands; study the crop-disease library; and plan field work with
+            weather advisories for your farm location.
           </p>
 
           {/* Quick Feature Pillars */}
@@ -164,7 +173,7 @@ export const FarmerLoginPage: React.FC = () => {
             <div className="rounded-xl bg-white border border-forest-100 p-3.5 shadow-xs">
               <Tractor className="w-5 h-5 text-leaf-600 mb-1.5" />
               <h2 className="text-xs font-bold text-forest-950">Field Digital Twin</h2>
-              <p className="text-[11px] text-forest-700 mt-0.5">Plot NDVI & growth tracking</p>
+              <p className="text-[11px] text-forest-700 mt-0.5">Zone status, sensors & records</p>
             </div>
             <div className="rounded-xl bg-white border border-forest-100 p-3.5 shadow-xs">
               <BookOpen className="w-5 h-5 text-leaf-600 mb-1.5" />
