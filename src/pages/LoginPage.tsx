@@ -16,17 +16,9 @@ import {
   TrendingUp,
   Package,
   Truck,
-  Copy,
-  Check,
 } from 'lucide-react';
 import { AgriPulseLogo } from '../components/AgriPulseLogo';
-import {
-  DEMO_SELLER_EMAIL,
-  DEMO_SELLER_PASSWORD,
-  DEMO_FARMER_EMAIL,
-  DEMO_FARMER_PASSWORD,
-  useAgriPulse,
-} from '../context/AgriPulseContext';
+import { useAgriPulse, DEMO_MODE_ENABLED } from '../context/AgriPulseContext';
 
 export const LoginPage: React.FC = () => {
   const {
@@ -46,7 +38,6 @@ export const LoginPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
-  const [copiedField, setCopiedField] = useState<string | null>(null);
 
   // If already logged in, redirect to respective portal
   if (session) {
@@ -63,12 +54,12 @@ export const LoginPage: React.FC = () => {
     if (!trimmed) {
       errs.email = 'Please enter your registered seller or vendor email address.';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
-      errs.email = 'Please enter a valid email address (e.g., seller.demo@kisanmart.in).';
+      errs.email = 'Please enter a valid email address (e.g., seller@example.com).';
     }
     if (!passVal) {
       errs.password = 'Please enter your account password.';
-    } else if (passVal.length < 6) {
-      errs.password = 'Password must be at least 6 characters.';
+    } else if (passVal.length < 10) {
+      errs.password = 'Password must be at least 10 characters.';
     }
     setFieldErrors(errs);
     return Object.keys(errs).length === 0;
@@ -100,6 +91,8 @@ export const LoginPage: React.FC = () => {
       const res = await loginAsSellerDemo();
       if (res.ok) {
         navigate('/seller', { replace: true });
+      } else {
+        setErrorMsg(res.error || 'Could not open the development seller workspace.');
       }
     } finally {
       setIsSubmitting(false);
@@ -113,31 +106,22 @@ export const LoginPage: React.FC = () => {
       const res = await loginAsFarmerDemo();
       if (res.ok) {
         navigate('/home', { replace: true });
+      } else {
+        setErrorMsg(res.error || 'Could not open the development farmer workspace.');
       }
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleFillSellerDemo = () => {
-    setEmail(DEMO_SELLER_EMAIL);
-    setPassword(DEMO_SELLER_PASSWORD);
-    setFieldErrors({});
-    setErrorMsg(null);
-  };
 
-  const handleCopy = (text: string, label: string) => {
-    void navigator.clipboard?.writeText(text);
-    setCopiedField(label);
-    setTimeout(() => setCopiedField(null), 1600);
-  };
 
   return (
-    <div className="min-h-screen bg-slate-900 flex flex-col justify-between text-slate-100">
+    <div className="login-page min-h-screen bg-warmbg flex flex-col justify-between text-slate-900">
       {/* Top Header */}
-      <header className="bg-forest-950 border-b border-forest-800/80 px-4 sm:px-8 py-3.5 flex items-center justify-between">
+      <header className="login-header bg-white border-b border-forest-100 px-4 sm:px-8 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <AgriPulseLogo size="md" theme="light" />
+          <AgriPulseLogo size="md" theme="dark" />
           <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
             <Store className="w-3.5 h-3.5" />
             Seller Central
@@ -161,12 +145,12 @@ export const LoginPage: React.FC = () => {
       </header>
 
       {/* Main Split Section */}
-      <main className="max-w-6xl mx-auto w-full px-4 py-8 sm:py-12 flex-1 flex flex-col lg:flex-row items-center gap-8 lg:gap-14">
+      <main className="login-main max-w-6xl mx-auto w-full px-4 py-8 sm:py-10 flex-1 grid grid-cols-1 lg:grid-cols-2 items-stretch gap-6 lg:gap-8">
         {/* Left Hero Card */}
-        <div className="lg:w-1/2 w-full space-y-6">
+        <div className="login-story space-y-6">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-semibold">
             <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            <span>AgriPulse Verified Agro-Seller & Mandi Network</span>
+            <span>AGRIPULSE Seller Portal</span>
           </div>
 
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-tight">
@@ -174,32 +158,30 @@ export const LoginPage: React.FC = () => {
           </h1>
 
           <p className="text-base text-slate-300 leading-relaxed">
-            Manage your agricultural supply business. List certified seed lots, fertilizers, crop
-            protection, and machinery, fulfill farmer orders, track dispatch tracking IDs, and manage
-            weekly mandi settlements.
+            Sign in to your server-backed seller account. Catalog, order, and settlement screens currently contain sample workflows; seller verification, shipping, payments, and payouts are not connected.
           </p>
 
           {/* Value Props for Sellers */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
             <div className="rounded-2xl bg-forest-900/60 border border-forest-800 p-4">
               <Package className="w-5 h-5 text-emerald-400 mb-2" />
-              <h2 className="text-xs font-bold text-white">Live Catalog Management</h2>
+              <h2 className="text-xs font-bold text-white">Catalog tools preview</h2>
               <p className="text-[11px] text-slate-300 mt-0.5">
-                Add, price & manage inventory in seconds
+                Demo listings only; not published to a live store
               </p>
             </div>
             <div className="rounded-2xl bg-forest-900/60 border border-forest-800 p-4">
               <Truck className="w-5 h-5 text-emerald-400 mb-2" />
-              <h2 className="text-xs font-bold text-white">Farmer Order Dispatch</h2>
+              <h2 className="text-xs font-bold text-white">Order workflow preview</h2>
               <p className="text-[11px] text-slate-300 mt-0.5">
-                Automated shipping slips & GST invoices
+                Simulated dispatch and invoice views
               </p>
             </div>
             <div className="rounded-2xl bg-forest-900/60 border border-forest-800 p-4">
               <TrendingUp className="w-5 h-5 text-emerald-400 mb-2" />
-              <h2 className="text-xs font-bold text-white">Weekly Payouts</h2>
+              <h2 className="text-xs font-bold text-white">Settlement tools preview</h2>
               <p className="text-[11px] text-slate-300 mt-0.5">
-                0% demo commission & direct NEFT settlements
+                No bank or payment connection is active
               </p>
             </div>
           </div>
@@ -218,13 +200,13 @@ export const LoginPage: React.FC = () => {
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <button
+              {DEMO_MODE_ENABLED && <button
                 type="button"
                 onClick={handleInstantDemoFarmer}
                 className="px-2.5 py-1.5 rounded-lg bg-emerald-900 hover:bg-emerald-800 text-emerald-200 text-xs font-semibold border border-emerald-700 transition"
               >
-                1-Click Farmer
-              </button>
+                Farmer Demo
+              </button>}
               <Link
                 to="/farmer/login"
                 className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition whitespace-nowrap"
@@ -236,13 +218,13 @@ export const LoginPage: React.FC = () => {
         </div>
 
         {/* Right Form Card */}
-        <div className="lg:w-1/2 w-full">
-          <div className="bg-white rounded-3xl shadow-xl border border-slate-200 text-slate-900 p-6 sm:p-8">
+        <div className="login-form-wrap">
+          <div className="login-form-card bg-white rounded-3xl shadow-xl border border-slate-200 text-slate-900 p-6 sm:p-8">
             {/* Top Primary 1-Click Action */}
-            <div className="mb-6 pb-6 border-b border-slate-100">
+            {DEMO_MODE_ENABLED && <div className="mb-6 pb-6 border-b border-slate-100">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-bold uppercase tracking-wider text-emerald-800">
-                  Instant 1-Click Demo Portals
+                  Development Demo Access
                 </span>
                 <span className="text-[11px] text-slate-500 font-medium">No password required</span>
               </div>
@@ -254,7 +236,7 @@ export const LoginPage: React.FC = () => {
                   className="w-full inline-flex items-center justify-center gap-2 py-3.5 px-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm shadow-md transition transform active:scale-98"
                 >
                   <Sprout className="w-4 h-4 text-amber-300 shrink-0" />
-                  <span>Launch Farmer Portal</span>
+                  <span>Open Farmer Demo</span>
                 </button>
                 <button
                   type="button"
@@ -263,15 +245,15 @@ export const LoginPage: React.FC = () => {
                   className="w-full inline-flex items-center justify-center gap-2 py-3.5 px-3.5 rounded-2xl bg-forest-950 hover:bg-forest-900 text-white font-bold text-xs sm:text-sm shadow-md transition transform active:scale-98"
                 >
                   <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>Launch Seller Portal</span>
+                  <span>Open Seller Demo</span>
                 </button>
               </div>
-            </div>
+            </div>}
 
             {/* Standard Seller Sign In Form */}
             <form onSubmit={handleSellerLogin} className="space-y-4">
               <div className="text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                Or Sign In with Seller Credentials
+                Seller account sign-in
               </div>
 
               {errorMsg && (
@@ -297,7 +279,7 @@ export const LoginPage: React.FC = () => {
                       setEmail(e.target.value);
                       if (fieldErrors.email) setFieldErrors({ ...fieldErrors, email: undefined });
                     }}
-                    placeholder="seller.demo@kisanmart.in"
+                    placeholder="seller@example.com"
                     className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-300 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
@@ -348,13 +330,6 @@ export const LoginPage: React.FC = () => {
                   />
                   <span className="text-slate-600">Keep me logged in</span>
                 </label>
-                <button
-                  type="button"
-                  onClick={handleFillSellerDemo}
-                  className="text-emerald-700 hover:text-emerald-800 font-semibold hover:underline"
-                >
-                  Auto-fill Seller Demo
-                </button>
               </div>
 
               <button
@@ -367,54 +342,11 @@ export const LoginPage: React.FC = () => {
               </button>
             </form>
 
-            {/* Demo Account Credentials Reference Card */}
-            <div className="mt-6 rounded-2xl bg-slate-50 border border-slate-200 p-4 text-xs">
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-bold text-slate-900 flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                  Default Demonstration Seller Account
-                </span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-semibold">
-                  Pre-configured Co-op
-                </span>
-              </div>
-
-              <div className="space-y-1.5 font-mono text-[11px] text-slate-700">
-                <div className="flex items-center justify-between bg-white px-2.5 py-1.5 rounded-lg border border-slate-200">
-                  <span>
-                    Email:{' '}
-                    <strong className="text-slate-900 font-semibold">{DEMO_SELLER_EMAIL}</strong>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleCopy(DEMO_SELLER_EMAIL, 'seller-email')}
-                    className="text-slate-400 hover:text-slate-800 ml-2"
-                  >
-                    {copiedField === 'seller-email' ? (
-                      <Check className="w-3.5 h-3.5 text-emerald-600" />
-                    ) : (
-                      <Copy className="w-3.5 h-3.5" />
-                    )}
-                  </button>
-                </div>
-                <div className="flex items-center justify-between bg-white px-2.5 py-1.5 rounded-lg border border-slate-200">
-                  <span>
-                    Password:{' '}
-                    <strong className="text-slate-900 font-semibold">{DEMO_SELLER_PASSWORD}</strong>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleCopy(DEMO_SELLER_PASSWORD, 'seller-password')}
-                    className="text-slate-400 hover:text-slate-800 ml-2"
-                  >
-                    {copiedField === 'seller-password' ? (
-                      <Check className="w-3.5 h-3.5 text-emerald-600" />
-                    ) : (
-                      <Copy className="w-3.5 h-3.5" />
-                    )}
-                  </button>
-                </div>
-              </div>
+            <div className="auth-security-note mt-5">
+              <ShieldCheck className="w-4 h-4" />
+              <p>{DEMO_MODE_ENABLED
+                ? 'Account sign-in uses the AGRIPULSE API. Development demo access uses one-click launchers above; no shared password is embedded in this page.'
+                : 'Sign-in is handled by the AGRIPULSE API. Email verification, password recovery, seller verification, and payout services are not configured here.'}</p>
             </div>
 
             {/* Bottom Links */}
@@ -432,8 +364,7 @@ export const LoginPage: React.FC = () => {
 
       {/* Footer */}
       <footer className="text-center py-6 text-xs text-slate-400 border-t border-slate-800 bg-forest-950">
-        © 2026 AgriPulse Agro-Business & Seller Central. Certified Marketplace Platform for
-        Agricultural Input Dealers & Producers.
+        © 2026 AGRIPULSE Seller Portal. Catalog, order, and payout workflows are demonstrations.
       </footer>
     </div>
   );

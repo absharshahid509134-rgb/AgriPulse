@@ -812,7 +812,7 @@ export const SEED_DICTIONARY_ENTRIES: DictionaryEntry[] = [
     hindiExplanation:
       'जब हवा में नमी 80% से ऊपर लगातार बनी रहती है, तो झुलसा व फफूंद रोगों तथा माहू कीट के पनपने की संभावना बढ़ जाती है।',
     practicalExample:
-      'Monitoring morning and evening RH on the AgriPulse Weather dashboard to schedule preventive field scouting.',
+      'Monitoring morning and evening RH on the AGRIPULSE Weather dashboard to schedule preventive field scouting.',
     whyItMatters:
       'Key environmental indicator for early disease-risk forecasting and harvest drying.',
     relatedTerms: ['Blight (Early & Late Blight)', 'Evapotranspiration (ET)', 'Grain Moisture Content'],
@@ -985,11 +985,11 @@ export const SEED_DICTIONARY_ENTRIES: DictionaryEntry[] = [
     simpleDefinition: 'A structured digital record of a real farm—combining plot boundaries, crop stages, soil tests, weather forecasts, and field observations in one living workspace.',
     hindiDefinition: 'खेत के प्लॉट, बोई गई फसल, मिट्टी की जांच, मौसम और दैनिक निरीक्षणों का कंप्यूटर/मोबाइल पर व्यवस्थित लाइव रिकॉर्ड।',
     farmerFriendlyExplanation:
-      'Just as keeping a ledger tracks farm finances, a Farm Digital Twin (like AgriPulse) remembers every plot’s sowing date, moisture reading, symptom note, and upcoming irrigation so you can anticipate stress early.',
+      'Just as keeping a ledger tracks farm finances, a Farm Digital Twin (like AGRIPULSE) remembers every plot’s sowing date, moisture reading, symptom note, and upcoming irrigation so you can anticipate stress early.',
     hindiExplanation:
       'यह आपके खेत की डिजिटल डायरी और सलाहकार की तरह काम करता है, जिसमें हर प्लॉट की फसल, सिंचाई और मौसम का हिसाब एक जगह सुरक्षित रहता है।',
     practicalExample:
-      'Viewing Plot A1, A2, and A3 crop stages alongside Karnal 7-day weather warnings on the AgriPulse dashboard.',
+      'Viewing Plot A1, A2, and A3 crop stages alongside Karnal 7-day weather warnings on the AGRIPULSE dashboard.',
     whyItMatters:
       'Turns scattered field observations into timely, preventive farming decisions.',
     relatedTerms: ['Tensiometer', 'Soil Health Card', 'Economic Threshold Level (ETL)'],

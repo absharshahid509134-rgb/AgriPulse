@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AuthSession,
   CartItem,
@@ -8,9 +8,17 @@ import {
   DemoOrder,
   DictionaryEntry,
   DiseaseReport,
+  DeviceEvent,
+  DeviceMetadataPatch,
+  DeviceRegistrationInput,
+  DeviceStatus,
+  IoTDevice,
+  TelemetryReading,
   Farm,
   FarmActivity,
   FarmerProfile,
+  FarmerRegistrationRequest,
+  SellerRegistrationRequest,
   FarmPlot,
   FieldObservation,
   GovernmentScheme,
@@ -25,24 +33,37 @@ import {
 import {
   INITIAL_CHAT_MESSAGES,
   loadInitialDataSnapshot,
-  readAuthSession,
   resetAllDemoDataToSeed,
   safeWriteStorage,
   STORAGE_KEYS,
-  writeAuthSession,
 } from '../services/storageService';
 import { SEED_DICTIONARY_ENTRIES } from '../data/seedDictionary';
 import { SEED_GOVERNMENT_SCHEMES, SEED_NEWS_ARTICLES } from '../data/seedNewsAndSchemes';
 import { VALID_DEMO_PROMO_CODES } from '../data/seedProducts';
+import { authApi, deviceApi, workspaceApi } from '../services/apiClient';
 
-export const DEMO_FARMER_EMAIL = 'farmer.demo@agrisense.in';
-export const DEMO_FARMER_PASSWORD = 'Farm@2026!';
-
-export const DEMO_SELLER_EMAIL = 'seller.demo@kisanmart.in';
-export const DEMO_SELLER_PASSWORD = 'Seller@2026!';
-
+export const DEMO_MODE_ENABLED = import.meta.env.DEV;
+export const DEMO_FARMER_EMAIL = 'farmer.demo@agripulse.in';
+export const DEMO_SELLER_EMAIL = 'seller.demo@agripulse.in';
 export const DEMO_ACCOUNT_EMAIL = DEMO_FARMER_EMAIL;
-export const DEMO_ACCOUNT_PASSWORD = DEMO_FARMER_PASSWORD;
+
+const EMPTY_CHECKOUT_DRAFT: CheckoutAddressDraft = {
+  customerName: '',
+  mobileNumber: '',
+  deliveryAddress: '',
+  village: '',
+  district: '',
+  state: '',
+  pinCode: '',
+  deliveryInstructions: '',
+  promoCode: '',
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const workspaceList = <T,>(data: Record<string, unknown>, key: string): T[] =>
+  Array.isArray(data[key]) ? data[key] as T[] : [];
 
 interface CartTotals {
   subtotalPaise: number;
@@ -56,22 +77,22 @@ interface CartTotals {
 interface AgriPulseContextValue {
   // Auth
   session: AuthSession | null;
+  sessionLoading: boolean;
+  workspaceHydrated: boolean;
+  workspaceSyncStatus: 'idle' | 'loading' | 'saving' | 'saved' | 'error';
+  workspaceSyncError: string | null;
   loginWithCredentials: (
     email: string,
     password: string,
     rememberMe: boolean,
     intendedPortal?: PortalType
   ) => Promise<{ ok: boolean; portal: PortalType; error?: string }>;
-  loginAsSellerDemo: () => Promise<{ ok: boolean; portal: PortalType }>;
-  loginAsFarmerDemo: () => Promise<{ ok: boolean; portal: PortalType }>;
-  registerSeller: (
-    sellerData: Partial<SellerProfile> & { password?: string }
-  ) => Promise<{ ok: boolean; error?: string }>;
-  registerFarmer: (
-    farmerData: Partial<FarmerProfile> & { password?: string }
-  ) => Promise<{ ok: boolean; error?: string }>;
-  switchPortal: (target: PortalType) => void;
-  logout: () => void;
+  loginAsSellerDemo: () => Promise<{ ok: boolean; portal: PortalType; error?: string }>;
+  loginAsFarmerDemo: () => Promise<{ ok: boolean; portal: PortalType; error?: string }>;
+  registerSeller: (sellerData: SellerRegistrationRequest) => Promise<{ ok: boolean; error?: string }>;
+  registerFarmer: (farmerData: FarmerRegistrationRequest) => Promise<{ ok: boolean; error?: string }>;
+  switchPortal: (target: PortalType) => Promise<boolean>;
+  logout: () => Promise<void>;
 
   // Seller Profile & Catalog Management
   sellerProfile: SellerProfile;
@@ -114,6 +135,18 @@ interface AgriPulseContextValue {
   updateActivity: (act: FarmActivity) => void;
   toggleActivityComplete: (actId: string) => void;
   deleteActivity: (actId: string) => void;
+
+  // Device identity, pairing, events and telemetry are server-owned.
+  devices: IoTDevice[];
+  devicesLoading: boolean;
+  deviceApiError: string | null;
+  refreshDevices: () => Promise<void>;
+  deviceEvents: DeviceEvent[];
+  telemetryCache: TelemetryReading[];
+  registerDevice: (input: DeviceRegistrationInput) => Promise<IoTDevice>;
+  updateDeviceMetadata: (deviceId: string, patch: DeviceMetadataPatch) => Promise<void>;
+  assignDeviceGateway: (deviceId: string, gatewayId?: string) => Promise<boolean>;
+  retireDevice: (deviceId: string) => Promise<void>;
 
   // Weather & Rainfall
   weather: WeatherSnapshot;
@@ -189,8 +222,15 @@ const AgriPulseContext = createContext<AgriPulseContextValue | undefined>(undefi
 
 export const AgriPulseProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const initialSnapshot = useMemo(() => loadInitialDataSnapshot(), []);
+  const workspaceRevisionRef = useRef(0);
+  const workspaceWriteQueue = useRef<Promise<void>>(Promise.resolve());
+  const hydrationGeneration = useRef(0);
 
-  const [session, setSession] = useState<AuthSession | null>(() => readAuthSession());
+  const [session, setSession] = useState<AuthSession | null>(null);
+  const [sessionLoading, setSessionLoading] = useState(true);
+  const [workspaceHydrated, setWorkspaceHydrated] = useState(false);
+  const [workspaceSyncStatus, setWorkspaceSyncStatus] = useState<'idle' | 'loading' | 'saving' | 'saved' | 'error'>('idle');
+  const [workspaceSyncError, setWorkspaceSyncError] = useState<string | null>(null);
   const [profile, setProfile] = useState<FarmerProfile>(initialSnapshot.profile);
   const [sellerProfile, setSellerProfile] = useState<SellerProfile>(initialSnapshot.sellerProfile);
   const [farms, setFarms] = useState<Farm[]>(initialSnapshot.farms);
@@ -201,6 +241,11 @@ export const AgriPulseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   );
   const [activities, setActivities] = useState<FarmActivity[]>(initialSnapshot.activities);
   const [weather, setWeatherState] = useState<WeatherSnapshot>(initialSnapshot.weather);
+  const [devices, setDevices] = useState<IoTDevice[]>(initialSnapshot.devices);
+  const [devicesLoading, setDevicesLoading] = useState(false);
+  const [deviceApiError, setDeviceApiError] = useState<string | null>(null);
+  const [deviceEvents, setDeviceEvents] = useState<DeviceEvent[]>(initialSnapshot.deviceEvents);
+  const [telemetryCache, setTelemetryCache] = useState<TelemetryReading[]>(initialSnapshot.telemetryCache);
   const [rainfallLogs, setRainfallLogs] = useState<RainfallLog[]>(initialSnapshot.rainfallLogs);
   const [diseaseReports, setDiseaseReports] = useState<DiseaseReport[]>(
     initialSnapshot.diseaseReports
@@ -228,6 +273,229 @@ export const AgriPulseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [pendingChatPrompt, setPendingChatPrompt] = useState<string | null>(null);
 
+  const makeWorkspacePayload = (): Record<string, unknown> => {
+    const { bankAccountName: _bankName, bankAccountNumber: _bankNumber, ifscCode: _ifsc, ...safeSellerProfile } = sellerProfile;
+    return {
+      schemaVersion: 1,
+      profile,
+      sellerProfile: { ...safeSellerProfile, isVerified: false, isDemoSeller: Boolean(session?.isDemo) },
+      farms,
+      plots,
+      crops,
+      observations,
+      activities,
+      rainfallLogs,
+      diseaseReports,
+      dictBookmarks,
+      dictRecent,
+      products,
+      cart,
+      wishlist,
+      recentProducts,
+      checkoutDraft,
+      orders,
+      newsBookmarks,
+      chatHistory,
+      activeFarmId,
+    };
+  };
+
+  const makeEmptyWorkspace = (currentSession: AuthSession): Record<string, unknown> => {
+    const profileFallback: FarmerProfile = {
+      id: currentSession.userId,
+      name: currentSession.farmerName || '',
+      email: currentSession.email,
+      mobile: '',
+      state: '',
+      district: '',
+      village: '',
+      isDemoAccount: false,
+      joinedDate: new Date().toISOString().slice(0, 10),
+      preferences: {
+        language: 'en',
+        preferredAreaUnit: 'acre',
+        bighaToAcreFactor: 0.25,
+        bighaRegionLabel: 'Regional Bigha (confirm locally)',
+        defaultFarmId: '',
+        defaultCrop: '',
+        weatherLocation: { state: '', district: '', locality: '' },
+        notifications: { weatherAlerts: true, irrigationReminders: true, cropInspectionAlerts: true, orderUpdates: true, schemeUpdates: true },
+      },
+    };
+    const { bankAccountName: _bankName, bankAccountNumber: _bankNumber, ifscCode: _ifsc, ...safeSellerProfile } = initialSnapshot.sellerProfile;
+    return {
+      schemaVersion: 1,
+      profile: profileFallback,
+      sellerProfile: { ...safeSellerProfile, id: currentSession.userId, email: currentSession.email, businessName: '', isVerified: false, isDemoSeller: false },
+      farms: [], plots: [], crops: [], observations: [], activities: [], rainfallLogs: [], diseaseReports: [],
+      dictBookmarks: [], dictRecent: [], products: initialSnapshot.products, cart: [], wishlist: [],
+      recentProducts: [], checkoutDraft: EMPTY_CHECKOUT_DRAFT, orders: [], newsBookmarks: [], chatHistory: [],
+      activeFarmId: '',
+    };
+  };
+
+  const applyWorkspace = (data: Record<string, unknown>, currentSession: AuthSession) => {
+    const profileData = isRecord(data.profile) ? data.profile as Partial<FarmerProfile> : undefined;
+    const profilePreferences = isRecord(profileData?.preferences) ? profileData.preferences : {};
+    const farmerProfile: FarmerProfile = {
+      ...(currentSession.isDemo ? initialSnapshot.profile : {
+        id: currentSession.userId, name: currentSession.farmerName || '', email: currentSession.email,
+        mobile: '', state: '', district: '', village: '', joinedDate: new Date().toISOString().slice(0, 10),
+        preferences: initialSnapshot.profile.preferences,
+      }),
+      ...profileData,
+      id: currentSession.userId,
+      email: profileData?.email || currentSession.email,
+      isDemoAccount: currentSession.isDemo,
+      preferences: { ...initialSnapshot.profile.preferences, ...profilePreferences } as FarmerProfile['preferences'],
+    } as FarmerProfile;
+    const sellerData = isRecord(data.sellerProfile) ? data.sellerProfile as Partial<SellerProfile> : undefined;
+    const sellerBase: SellerProfile = currentSession.isDemo
+      ? initialSnapshot.sellerProfile
+      : { ...initialSnapshot.sellerProfile, id: currentSession.userId, businessName: '', tradeName: '', contactPerson: '', email: currentSession.email, mobile: '', category: '', gstin: '', licenseNumber: '', state: '', district: '', city: '', address: '', pincode: '', isDemoSeller: false, isVerified: false, rating: 0, totalOrders: 0, totalRevenuePaise: 0 };
+    setProfile(farmerProfile);
+    setSellerProfile({ ...sellerBase, ...sellerData, id: currentSession.userId, email: sellerData?.email || currentSession.email, bankAccountName: '', bankAccountNumber: '', ifscCode: '', isVerified: false, isDemoSeller: currentSession.isDemo } as SellerProfile);
+    setFarms(workspaceList<Farm>(data, 'farms'));
+    setPlots(workspaceList<FarmPlot>(data, 'plots'));
+    setCrops(workspaceList<CropRecord>(data, 'crops'));
+    setObservations(workspaceList<FieldObservation>(data, 'observations'));
+    setActivities(workspaceList<FarmActivity>(data, 'activities'));
+    setRainfallLogs(workspaceList<RainfallLog>(data, 'rainfallLogs'));
+    setDiseaseReports(workspaceList<DiseaseReport>(data, 'diseaseReports'));
+    setDictBookmarks(workspaceList<string>(data, 'dictBookmarks'));
+    setDictRecent(workspaceList<string>(data, 'dictRecent'));
+    setProducts(Array.isArray(data.products) ? data.products as StoreProduct[] : initialSnapshot.products);
+    setCart(workspaceList<CartItem>(data, 'cart'));
+    setWishlist(workspaceList<string>(data, 'wishlist'));
+    setRecentProducts(workspaceList<string>(data, 'recentProducts'));
+    const checkoutDefaults = currentSession.isDemo ? initialSnapshot.checkoutDraft : EMPTY_CHECKOUT_DRAFT;
+    const checkoutData = isRecord(data.checkoutDraft) ? data.checkoutDraft : {};
+    setCheckoutDraft({
+      customerName: typeof checkoutData.customerName === 'string' ? checkoutData.customerName : checkoutDefaults.customerName,
+      mobileNumber: typeof checkoutData.mobileNumber === 'string' ? checkoutData.mobileNumber : checkoutDefaults.mobileNumber,
+      deliveryAddress: typeof checkoutData.deliveryAddress === 'string' ? checkoutData.deliveryAddress : checkoutDefaults.deliveryAddress,
+      village: typeof checkoutData.village === 'string' ? checkoutData.village : checkoutDefaults.village,
+      district: typeof checkoutData.district === 'string' ? checkoutData.district : checkoutDefaults.district,
+      state: typeof checkoutData.state === 'string' ? checkoutData.state : checkoutDefaults.state,
+      pinCode: typeof checkoutData.pinCode === 'string' ? checkoutData.pinCode : checkoutDefaults.pinCode,
+      deliveryInstructions: typeof checkoutData.deliveryInstructions === 'string' ? checkoutData.deliveryInstructions : checkoutDefaults.deliveryInstructions,
+      promoCode: typeof checkoutData.promoCode === 'string' ? checkoutData.promoCode : checkoutDefaults.promoCode,
+    });
+    setOrders(workspaceList<DemoOrder>(data, 'orders'));
+    setNewsBookmarks(workspaceList<string>(data, 'newsBookmarks'));
+    setChatHistory(workspaceList<ChatMessage>(data, 'chatHistory'));
+    setWeatherState(initialSnapshot.weather);
+    setTelemetryCache([]);
+    setDeviceEvents([]);
+    const preferredFarmId = typeof data.activeFarmId === 'string' ? data.activeFarmId : farmerProfile.preferences.defaultFarmId;
+    setActiveFarmIdState(preferredFarmId || workspaceList<Farm>(data, 'farms').find((farm) => !farm.isArchived)?.id || '');
+  };
+
+  const hydrateWorkspace = async (currentSession: AuthSession, providedWorkspace?: Awaited<ReturnType<typeof workspaceApi.get>>) => {
+    const generation = ++hydrationGeneration.current;
+    setWorkspaceSyncStatus('loading');
+    setWorkspaceSyncError(null);
+    try {
+      let remote = providedWorkspace || await workspaceApi.get();
+      if (!remote.initialized) {
+        const initialData = currentSession.isDemo ? makeWorkspacePayload() : makeEmptyWorkspace(currentSession);
+        remote = await workspaceApi.save(initialData, remote.revision);
+      }
+      if (generation !== hydrationGeneration.current) return;
+      workspaceRevisionRef.current = remote.revision;
+      applyWorkspace(remote.data, currentSession);
+      if (currentSession.portalType === 'farmer') {
+        setDevicesLoading(true);
+        try {
+          const response = await deviceApi.list();
+          if (generation === hydrationGeneration.current) {
+            setDevices(response.devices);
+            setDeviceApiError(null);
+          }
+        } catch (error) {
+          if (generation === hydrationGeneration.current) {
+            setDeviceApiError(error instanceof Error ? error.message : 'Device API is unavailable.');
+            if (!currentSession.isDemo) setDevices([]);
+          }
+        } finally {
+          if (generation === hydrationGeneration.current) setDevicesLoading(false);
+        }
+      }
+      if (generation === hydrationGeneration.current) {
+        setWorkspaceHydrated(true);
+        setWorkspaceSyncStatus('saved');
+      }
+    } catch (error) {
+      if (generation !== hydrationGeneration.current) return;
+      const message = error instanceof Error ? error.message : 'Unable to load the account workspace.';
+      setWorkspaceSyncError(message);
+      setWorkspaceSyncStatus('error');
+      if (!currentSession.isDemo) applyWorkspace(makeEmptyWorkspace(currentSession), currentSession);
+      setWorkspaceHydrated(true);
+    }
+  };
+
+  const refreshDevices = async (currentSession: AuthSession | null = session) => {
+    if (!currentSession || currentSession.portalType !== 'farmer') return;
+    setDevicesLoading(true);
+    try {
+      const response = await deviceApi.list();
+      setDevices(response.devices);
+      setDeviceApiError(null);
+    } catch (error) {
+      setDeviceApiError(error instanceof Error ? error.message : 'Device API is unavailable.');
+    } finally {
+      setDevicesLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    let mounted = true;
+    authApi.session()
+      .then(async ({ session: existingSession }) => {
+        if (!mounted) return;
+        if (existingSession) {
+          setSession(existingSession);
+          await hydrateWorkspace(existingSession);
+        }
+      })
+      .catch((error) => {
+        if (mounted) {
+          setWorkspaceSyncStatus('error');
+          setWorkspaceSyncError(error instanceof Error ? error.message : 'Could not reach the AGRIPULSE API.');
+        }
+      })
+      .finally(() => {
+        if (mounted) setSessionLoading(false);
+      });
+    return () => {
+      mounted = false;
+      hydrationGeneration.current += 1;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!session || !workspaceHydrated) return;
+    const payload = makeWorkspacePayload();
+    const timer = window.setTimeout(() => {
+      setWorkspaceSyncStatus('saving');
+      workspaceWriteQueue.current = workspaceWriteQueue.current
+        .catch(() => undefined)
+        .then(async () => {
+          try {
+            const result = await workspaceApi.save(payload, workspaceRevisionRef.current);
+            workspaceRevisionRef.current = result.revision;
+            setWorkspaceSyncStatus('saved');
+            setWorkspaceSyncError(null);
+          } catch (error) {
+            setWorkspaceSyncStatus('error');
+            setWorkspaceSyncError(error instanceof Error ? error.message : 'Workspace changes could not be saved.');
+          }
+        });
+    }, 650);
+    return () => window.clearTimeout(timer);
+  }, [session, workspaceHydrated, profile, sellerProfile, farms, plots, crops, observations, activities, rainfallLogs, diseaseReports, dictBookmarks, dictRecent, products, cart, wishlist, recentProducts, checkoutDraft, orders, newsBookmarks, chatHistory, activeFarmId]);
+
   // Sync activeFarmId if farms list changes
   useEffect(() => {
     const activeExists = farms.some((f) => f.id === activeFarmId && !f.isArchived);
@@ -242,215 +510,95 @@ export const AgriPulseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     [farms, activeFarmId]
   );
 
-  // Auth handlers
   const loginWithCredentials = async (
     email: string,
     password: string,
     rememberMe: boolean,
-    intendedPortal?: PortalType
+    intendedPortal: PortalType = 'farmer'
   ): Promise<{ ok: boolean; portal: PortalType; error?: string }> => {
-    await new Promise((r) => setTimeout(r, 380));
-
-    const trimmedEmail = email.trim().toLowerCase();
-
-    // Check if seller demo match
-    const isSellerDemo =
-      (trimmedEmail === DEMO_SELLER_EMAIL.toLowerCase() ||
-        trimmedEmail === 'seller.demo@kisanmart.in' ||
-        trimmedEmail === 'seller.demo@agripulse.in' ||
-        trimmedEmail === 'seller@kisanmart.in') &&
-      password === DEMO_SELLER_PASSWORD;
-
-    // Check if farmer demo match
-    const isFarmerDemo =
-      (trimmedEmail === DEMO_FARMER_EMAIL.toLowerCase() ||
-        trimmedEmail === 'farmer.demo@agrisense.in' ||
-        trimmedEmail === 'farmer.demo@agripulse.in' ||
-        trimmedEmail === 'farmer@agrisense.in') &&
-      password === DEMO_FARMER_PASSWORD;
-
-    if (isSellerDemo) {
-      const newSession: AuthSession = {
-        version: 'v1',
-        userId: sellerProfile.id,
-        email: DEMO_SELLER_EMAIL,
-        sellerName: sellerProfile.businessName,
-        role: 'Seller',
-        portalType: 'seller',
-        isDemo: true,
-        rememberMe,
-        loggedInAt: new Date().toISOString(),
+    try {
+      const response = await authApi.login({ email, password, rememberMe, portalType: intendedPortal });
+      setSession(response.session);
+      setSessionLoading(false);
+      await hydrateWorkspace(response.session, response.workspace);
+      return { ok: true, portal: response.session.portalType || intendedPortal };
+    } catch (error) {
+      return {
+        ok: false,
+        portal: intendedPortal,
+        error: error instanceof Error ? error.message : 'Sign-in failed. Check your details and try again.',
       };
-      writeAuthSession(newSession);
-      setSession(newSession);
-      return { ok: true, portal: 'seller' };
-    }
-
-    if (isFarmerDemo) {
-      const newSession: AuthSession = {
-        version: 'v1',
-        userId: profile.id,
-        email: DEMO_FARMER_EMAIL,
-        farmerName: profile.name,
-        role: 'Farmer',
-        portalType: 'farmer',
-        isDemo: true,
-        rememberMe,
-        loggedInAt: new Date().toISOString(),
-      };
-      writeAuthSession(newSession);
-      setSession(newSession);
-      return { ok: true, portal: 'farmer' };
-    }
-
-    // Custom non-demo credentials
-    if (password.length >= 6) {
-      const resolvedPortal: PortalType =
-        intendedPortal ||
-        (trimmedEmail.includes('seller') || trimmedEmail.includes('vendor') || trimmedEmail.includes('dealer')
-          ? 'seller'
-          : 'farmer');
-      const isSeller = resolvedPortal === 'seller';
-      const newSession: AuthSession = {
-        version: 'v1',
-        userId: isSeller ? `seller-${Date.now()}` : `farmer-${Date.now()}`,
-        email: trimmedEmail,
-        sellerName: isSeller ? sellerProfile.businessName || `${trimmedEmail.split('@')[0]} Agro Store` : undefined,
-        farmerName: !isSeller ? profile.name || trimmedEmail.split('@')[0] : undefined,
-        role: isSeller ? 'Seller' : 'Farmer',
-        portalType: resolvedPortal,
-        isDemo: false,
-        rememberMe,
-        loggedInAt: new Date().toISOString(),
-      };
-      writeAuthSession(newSession);
-      setSession(newSession);
-      return { ok: true, portal: resolvedPortal };
-    }
-
-    return {
-      ok: false,
-      portal: intendedPortal || 'seller',
-      error:
-        intendedPortal === 'seller'
-          ? 'Invalid seller credentials. For demo, use seller.demo@kisanmart.in and Seller@2026!, or click "1-Click Demo Seller Sign In".'
-          : 'Invalid farmer credentials. For demo, use farmer.demo@agrisense.in and Farm@2026!, or click "1-Click Demo Farmer Sign In".',
-    };
-  };
-
-  const loginAsSellerDemo = async (): Promise<{ ok: boolean; portal: PortalType }> => {
-    await new Promise((r) => setTimeout(r, 200));
-    const newSession: AuthSession = {
-      version: 'v1',
-      userId: sellerProfile.id,
-      email: DEMO_SELLER_EMAIL,
-      sellerName: sellerProfile.businessName,
-      role: 'Seller',
-      portalType: 'seller',
-      isDemo: true,
-      rememberMe: true,
-      loggedInAt: new Date().toISOString(),
-    };
-    writeAuthSession(newSession);
-    setSession(newSession);
-    return { ok: true, portal: 'seller' };
-  };
-
-  const loginAsFarmerDemo = async (): Promise<{ ok: boolean; portal: PortalType }> => {
-    await new Promise((r) => setTimeout(r, 200));
-    const newSession: AuthSession = {
-      version: 'v1',
-      userId: profile.id,
-      email: DEMO_FARMER_EMAIL,
-      farmerName: profile.name,
-      role: 'Farmer',
-      portalType: 'farmer',
-      isDemo: true,
-      rememberMe: true,
-      loggedInAt: new Date().toISOString(),
-    };
-    writeAuthSession(newSession);
-    setSession(newSession);
-    return { ok: true, portal: 'farmer' };
-  };
-
-  const registerSeller = async (
-    sellerData: Partial<SellerProfile> & { password?: string }
-  ): Promise<{ ok: boolean; error?: string }> => {
-    await new Promise((r) => setTimeout(r, 300));
-    const updatedSeller: SellerProfile = {
-      ...sellerProfile,
-      ...sellerData,
-      id: sellerProfile.id || `seller-${Date.now()}`,
-      businessName: sellerData.businessName || 'New Agro Store Partner',
-      email: sellerData.email || 'seller@kisanmart.in',
-      isVerified: true,
-      joinedDate: new Date().toISOString().split('T')[0],
-    };
-    setSellerProfile(updatedSeller);
-    safeWriteStorage(STORAGE_KEYS.SELLER_PROFILE, updatedSeller);
-
-    const newSession: AuthSession = {
-      version: 'v1',
-      userId: updatedSeller.id,
-      email: updatedSeller.email,
-      sellerName: updatedSeller.businessName,
-      role: 'Seller',
-      portalType: 'seller',
-      isDemo: false,
-      rememberMe: true,
-      loggedInAt: new Date().toISOString(),
-    };
-    writeAuthSession(newSession);
-    setSession(newSession);
-    return { ok: true };
-  };
-
-  const registerFarmer = async (
-    farmerData: Partial<FarmerProfile> & { password?: string }
-  ): Promise<{ ok: boolean; error?: string }> => {
-    await new Promise((r) => setTimeout(r, 300));
-    const updatedFarmer: FarmerProfile = {
-      ...profile,
-      ...farmerData,
-      name: farmerData.name || 'Progressive Farmer',
-      email: farmerData.email || 'farmer@agrisense.in',
-      joinedDate: new Date().toISOString().split('T')[0],
-    };
-    setProfile(updatedFarmer);
-    safeWriteStorage(STORAGE_KEYS.PROFILE, updatedFarmer);
-
-    const newSession: AuthSession = {
-      version: 'v1',
-      userId: updatedFarmer.id,
-      email: updatedFarmer.email,
-      farmerName: updatedFarmer.name,
-      role: 'Farmer',
-      portalType: 'farmer',
-      isDemo: false,
-      rememberMe: true,
-      loggedInAt: new Date().toISOString(),
-    };
-    writeAuthSession(newSession);
-    setSession(newSession);
-    return { ok: true };
-  };
-
-  const switchPortal = (target: PortalType) => {
-    if (session) {
-      const updated: AuthSession = {
-        ...session,
-        portalType: target,
-      };
-      setSession(updated);
-      writeAuthSession(updated);
     }
   };
 
-  const logout = () => {
-    writeAuthSession(null);
+  const openDemoPortal = async (portal: PortalType): Promise<{ ok: boolean; portal: PortalType; error?: string }> => {
+    if (!DEMO_MODE_ENABLED) return { ok: false, portal, error: 'Development demo access is disabled in this environment.' };
+    try {
+      const response = await authApi.demoSession(portal);
+      setSession(response.session);
+      setSessionLoading(false);
+      await hydrateWorkspace(response.session);
+      return { ok: true, portal };
+    } catch (error) {
+      return {
+        ok: false,
+        portal,
+        error: error instanceof Error ? error.message : 'Could not open the development demo workspace.',
+      };
+    }
+  };
+
+  const loginAsSellerDemo = () => openDemoPortal('seller');
+  const loginAsFarmerDemo = () => openDemoPortal('farmer');
+
+  const registerSeller = async (sellerData: SellerRegistrationRequest): Promise<{ ok: boolean; error?: string }> => {
+    try {
+      const response = await authApi.register({ portalType: 'seller', ...sellerData });
+      setSession(response.session);
+      setSessionLoading(false);
+      await hydrateWorkspace(response.session, response.workspace);
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : 'Seller account creation failed.' };
+    }
+  };
+
+  const registerFarmer = async (farmerData: FarmerRegistrationRequest): Promise<{ ok: boolean; error?: string }> => {
+    try {
+      const response = await authApi.register({ portalType: 'farmer', ...farmerData });
+      setSession(response.session);
+      setSessionLoading(false);
+      await hydrateWorkspace(response.session, response.workspace);
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : 'Farmer account creation failed.' };
+    }
+  };
+
+  const switchPortal = async (target: PortalType): Promise<boolean> => {
+    if (!session) return false;
+    if (session.portalType === target) return true;
+    try {
+      const response = await authApi.switchPortal(target);
+      setSession(response.session);
+      if (target === 'farmer') await refreshDevices(response.session);
+      return true;
+    } catch (error) {
+      setWorkspaceSyncError(error instanceof Error ? error.message : 'This account cannot switch to that portal.');
+      return false;
+    }
+  };
+
+  const logout = async (): Promise<void> => {
     setSession(null);
+    setWorkspaceHydrated(false);
+    setWorkspaceSyncStatus('idle');
+    setWorkspaceSyncError(null);
+    setDevices([]);
+    setDeviceEvents([]);
+    setTelemetryCache([]);
     setIsChatOpen(false);
+    try { await authApi.logout(); } catch { /* The server session expires even if a local logout request cannot reach it. */ }
   };
 
   // Profile & Logo
@@ -463,7 +611,6 @@ export const AgriPulseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         farmerName: updated.name,
       };
       setSession(nextSession);
-      writeAuthSession(nextSession);
     }
   };
 
@@ -477,7 +624,6 @@ export const AgriPulseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         sellerName: next.businessName,
       };
       setSession(nextSession);
-      writeAuthSession(nextSession);
     }
   };
 
@@ -511,6 +657,10 @@ export const AgriPulseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   const resetAllDemoData = () => {
+    if (!DEMO_MODE_ENABLED || !session?.isDemo) {
+      setWorkspaceSyncError('Reset is available only in a development demo workspace.');
+      return;
+    }
     resetAllDemoDataToSeed();
     const fresh = loadInitialDataSnapshot();
     setProfile(fresh.profile);
@@ -521,6 +671,9 @@ export const AgriPulseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setObservations(fresh.observations);
     setActivities(fresh.activities);
     setWeatherState(fresh.weather);
+    setDevices(fresh.devices);
+    setDeviceEvents(fresh.deviceEvents);
+    setTelemetryCache(fresh.telemetryCache);
     setRainfallLogs(fresh.rainfallLogs);
     setDiseaseReports(fresh.diseaseReports);
     setDictBookmarks(fresh.dictBookmarks);
@@ -689,6 +842,54 @@ export const AgriPulseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const next = activities.filter((a) => a.id !== actId);
     setActivities(next);
     safeWriteStorage(STORAGE_KEYS.ACTIVITIES, next);
+  };
+
+  // Device identity, gateway relations, events and telemetry are owned by the authenticated API.
+  const registerDevice = async (input: DeviceRegistrationInput): Promise<IoTDevice> => {
+    try {
+      const response = await deviceApi.register(input);
+      setDevices((current) => [response.device, ...current.filter((device) => device.id !== response.device.id)]);
+      setDeviceApiError(null);
+      return response.device;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Device registration failed.';
+      setDeviceApiError(message);
+      throw error;
+    }
+  };
+
+  const updateDeviceMetadata = async (deviceId: string, patch: DeviceMetadataPatch): Promise<void> => {
+    try {
+      const response = await deviceApi.patch(deviceId, patch as Record<string, unknown>);
+      setDevices((current) => current.map((device) => device.id === deviceId ? response.device : device));
+      setDeviceApiError(null);
+    } catch (error) {
+      setDeviceApiError(error instanceof Error ? error.message : 'Device details could not be saved.');
+      throw error;
+    }
+  };
+
+  const assignDeviceGateway = async (deviceId: string, gatewayId?: string): Promise<boolean> => {
+    try {
+      const response = await deviceApi.assignGateway(deviceId, gatewayId);
+      setDevices((current) => current.map((device) => device.id === deviceId ? response.device : device));
+      setDeviceApiError(null);
+      return true;
+    } catch (error) {
+      setDeviceApiError(error instanceof Error ? error.message : 'Gateway assignment failed.');
+      return false;
+    }
+  };
+
+  const retireDevice = async (deviceId: string): Promise<void> => {
+    try {
+      const response = await deviceApi.retire(deviceId);
+      setDevices((current) => current.map((device) => device.id === deviceId ? response.device : device));
+      setDeviceApiError(null);
+    } catch (error) {
+      setDeviceApiError(error instanceof Error ? error.message : 'Device could not be retired.');
+      throw error;
+    }
   };
 
   // Weather & Rainfall
@@ -1052,6 +1253,10 @@ export const AgriPulseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const value: AgriPulseContextValue = {
     session,
+    sessionLoading,
+    workspaceHydrated,
+    workspaceSyncStatus,
+    workspaceSyncError,
     loginWithCredentials,
     loginAsSellerDemo,
     loginAsFarmerDemo,
@@ -1091,6 +1296,16 @@ export const AgriPulseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     updateActivity,
     toggleActivityComplete,
     deleteActivity,
+    devices,
+    devicesLoading,
+    deviceApiError,
+    refreshDevices,
+    deviceEvents,
+    telemetryCache,
+    registerDevice,
+    updateDeviceMetadata,
+    assignDeviceGateway,
+    retireDevice,
     weather,
     setWeather,
     rainfallLogs,

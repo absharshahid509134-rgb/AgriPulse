@@ -31,7 +31,7 @@ export const OffersPage: React.FC = () => {
         <div className="relative z-10 max-w-2xl space-y-2.5">
           <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider bg-white/20 px-3 py-1 rounded-full text-emerald-100">
             <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-            Seasonal AgriSense Promotions & Savings
+            Seasonal AGRIPULSE Promotions & Savings
           </span>
           <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight">
             Special Agricultural Vouchers & Bundle Offers

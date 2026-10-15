@@ -153,7 +153,7 @@ export function buildDemoWeatherSnapshot(
     rainProbabilityPct: rainProb,
     soilTempEstimateC: Number((baseTemp - 4.5).toFixed(1)),
     sourceType: 'Demo Fallback Forecast',
-    sourceProvider: 'AgriPulse Demo Agro-Meteorological Dataset (No Live API Key Configured)',
+    sourceProvider: 'AGRIPULSE Demo Agro-Meteorological Dataset (No Live API Key Configured)',
     updatedAt: new Date().toISOString(),
     hourly: [
       { time: '06:00', tempC: baseTemp - 9, rainProbPct: Math.max(5, rainProb - 10), condition: 'Clear Dawn', windKmh: Math.max(6, wind - 4) },

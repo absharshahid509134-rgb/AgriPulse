@@ -6,7 +6,7 @@ export const SEED_STORE_PRODUCTS: StoreProduct[] = [
     id: 'prod-101',
     name: 'Pusa Yashasvi (HD-3226) Foundation Wheat Seed',
     category: 'Seeds and planting material',
-    brand: 'AgriPulse SeedSelect (Sample Brand)',
+    brand: 'AGRIPULSE SeedSelect (Sample Brand)',
     isSampleBrand: true,
     packSize: '40 kg Bag (1 Acre Seed Rate)',
     pricePaise: 148000, // ₹1,480
@@ -95,7 +95,7 @@ export const SEED_STORE_PRODUCTS: StoreProduct[] = [
     id: 'prod-104',
     name: 'Pusa Bold (RH-749) Indian Mustard Seed',
     category: 'Seeds and planting material',
-    brand: 'AgriPulse SeedSelect (Sample Brand)',
+    brand: 'AGRIPULSE SeedSelect (Sample Brand)',
     isSampleBrand: true,
     packSize: '2 kg Pack (1 Acre Pack)',
     pricePaise: 31000, // ₹310
@@ -400,7 +400,7 @@ export const SEED_STORE_PRODUCTS: StoreProduct[] = [
     id: 'prod-501',
     name: '3-in-1 Analog Soil Moisture, pH & Light Probe Meter',
     category: 'Soil testing and farm-monitoring kits',
-    brand: 'AgriSense FieldTools (Sample Brand)',
+    brand: 'AGRIPULSE FieldTools (Sample Brand)',
     isSampleBrand: true,
     packSize: '1 Unit (20 cm Dual-Electrode Probe)',
     pricePaise: 78000, // ₹780
@@ -418,7 +418,7 @@ export const SEED_STORE_PRODUCTS: StoreProduct[] = [
     shortDescription:
       'Battery-free dual-needle field probe for quick root-zone moisture trend checks and approximate soil pH screening.',
     detailedDescription:
-      'Sample catalog listing for a portable field probe used by farmers to check relative root-zone moisture at 10–18 cm depth before scheduling irrigation. Helps record field observations directly into AgriPulse.',
+      'Sample catalog listing for a portable field probe used by farmers to check relative root-zone moisture at 10–18 cm depth before scheduling irrigation. Helps record field observations directly into AGRIPULSE.',
     usageInstructions:
       'Wipe probes clean with a dry cloth, insert 15 cm vertically into moist root-zone soil avoiding stones, wait 60 seconds, and read the scale. For certified nutrient decisions, always pair with a laboratory Soil Health Card.',
     storageInstructions:
@@ -430,7 +430,7 @@ export const SEED_STORE_PRODUCTS: StoreProduct[] = [
     id: 'prod-502',
     name: 'Field Tensiometer Tube (30 cm Root-Zone Vacuum Gauge)',
     category: 'Soil testing and farm-monitoring kits',
-    brand: 'AgriSense FieldTools (Sample Brand)',
+    brand: 'AGRIPULSE FieldTools (Sample Brand)',
     isSampleBrand: true,
     packSize: '1 Complete Assembly with Ceramic Tip & Gauge',
     pricePaise: 165000, // ₹1,650
@@ -670,7 +670,7 @@ export const SEED_STORE_PRODUCTS: StoreProduct[] = [
     id: 'prod-802',
     name: '10x Illuminated Pocket Magnifier Loupe for Field Pest Scouting',
     category: 'Hand tools and accessories',
-    brand: 'AgriSense FieldTools (Sample Brand)',
+    brand: 'AGRIPULSE FieldTools (Sample Brand)',
     isSampleBrand: true,
     packSize: '1 Folding Metal Loupe with Protective Case',
     pricePaise: 28000, // ₹280
@@ -792,7 +792,7 @@ export const SEED_STORE_PRODUCTS: StoreProduct[] = [
     id: 'prod-1002',
     name: 'Digital Portable Grain Moisture Meter (Paddy, Wheat, Mustard & Gram)',
     category: 'Harvesting and storage supplies',
-    brand: 'AgriSense FieldTools (Sample Brand)',
+    brand: 'AGRIPULSE FieldTools (Sample Brand)',
     isSampleBrand: true,
     packSize: '1 Handheld Digital Unit with Sampling Cup & Carry Pouch',
     pricePaise: 215000, // ₹2,150
@@ -864,50 +864,13 @@ function enrichProducts(base: StoreProduct[]): StoreProduct[] {
     const rating = Number((4.6 + ((idx % 4) * 0.1)).toFixed(1));
     const reviewCount = 28 + ((idx * 7) % 75);
 
-    // Contextual highlights
-    let highlights = [
-      'Quality tested and approved under official agricultural standards',
-      'Optimized for Indian climatic conditions and soil types',
-      'Backed by manufacturer technical support and field guidance',
-      'Direct doorstep farm delivery across registered agricultural PIN codes',
+    // Sample product content; no listing claim is verified in the prototype.
+    const highlights = [
+      'Illustrative product description only; manufacturer and certifications are not verified.',
+      'Confirm crop fit, directions, and safety information against an authorized product label.',
+      'No independent testing, performance evidence, or warranty is connected to this sample listing.',
+      'Price, stock, delivery, and return details are simulated for interface preview.',
     ];
-
-    if (p.category.includes('Seeds')) {
-      highlights = [
-        'Certified seed lot with >85% lab germination guarantee and high physical purity',
-        'Bred for high grain yield, strong tillering, and regional disease tolerance',
-        'Treated with seed-protectant bio-agents for vigorous seedling emergence',
-        'Directly compatible with zero-till and conventional seed drills',
-      ];
-    } else if (p.category.includes('Fertilizers')) {
-      highlights = [
-        '100% compliant with Fertilizer Control Order (FCO) analytical purity standards',
-        'Fast-acting formulation ensures targeted vegetative and reproductive uptake',
-        'High water solubility eliminates nozzle clogging in drip and foliar systems',
-        'Corrects hidden hunger and promotes uniform green canopy development',
-      ];
-    } else if (p.category.includes('Crop protection')) {
-      highlights = [
-        'Integrated Pest Management (IPM) compliant formulation with minimal ecological impact',
-        'Rapid contact and translaminar action against targeted pests and foliar blights',
-        'Zero hazardous residue when applied according to label safety intervals',
-        'Compatible with standard knapsack sprayers and micronutrient tank mixes',
-      ];
-    } else if (p.category.includes('Soil testing')) {
-      highlights = [
-        'Direct instant measurement at root-zone depth without lab turnaround delay',
-        'Heavy-duty corrosion-resistant probes engineered for tough field soils',
-        'Calibrated scale tailored for Indian agro-climatic conditions and pH ranges',
-        'Helps optimize fertilizer application and prevent costly over-irrigation',
-      ];
-    } else if (p.category.includes('Sprayers') || p.category.includes('Irrigation')) {
-      highlights = [
-        'Heavy-duty virgin polymers and corrosion-proof brass/alloy fittings',
-        'Precision pressure regulation ensures uniform droplet dispersion across canopy',
-        'Ergonomic dual-strap harness and back padding for comfortable day-long spraying',
-        'Readily available spare parts and nozzle kits across all major farming districts',
-      ];
-    }
 
     // Contextual specifications
     const specifications = [
@@ -917,8 +880,8 @@ function enrichProducts(base: StoreProduct[]): StoreProduct[] {
       { label: 'Packaging', value: p.packSize },
       { label: 'Target Crops', value: p.compatibleCrops.join(', ') || 'All Major Agricultural Crops' },
       { label: 'Seasonal Suitability', value: p.seasonTag },
-      { label: 'Country of Origin', value: 'India' },
-      { label: 'Quality Standard', value: 'FCO / ICAR / BIS Quality Benchmarked' },
+      { label: 'Country of Origin', value: 'Not verified in this prototype' },
+      { label: 'Quality Standard', value: 'Not verified in this prototype' },
       { label: 'Storage Condition', value: p.storageInstructions },
       { label: 'Application Method', value: p.usageInstructions.slice(0, 100) + '...' },
     ];
@@ -939,7 +902,7 @@ function enrichProducts(base: StoreProduct[]): StoreProduct[] {
       },
       {
         question: 'What is the return or replacement policy for this product?',
-        answer: 'AgriSense provides a 7-day demo replacement window if the delivered packaging is damaged, broken, or does not match specifications.',
+        answer: 'AGRIPULSE sample listings include an illustrative 7-day replacement window if the delivered packaging is damaged, broken, or does not match specifications.',
       },
     ];
 
@@ -947,21 +910,21 @@ function enrichProducts(base: StoreProduct[]): StoreProduct[] {
     const reviews = [
       {
         id: `rev-${p.id}-1`,
-        userName: 'Sukhwinder Singh Gill',
+        userName: 'Demo Farmer (Sample)',
         rating: 5,
-        title: 'Outstanding quality and very fast delivery to our farm gate',
-        comment: `We applied this across 5 acres in Taraori block. Exactly as described, packaging was completely intact and results in the field were visible within days.`,
+        title: 'Illustrative review placeholder',
+        comment: `Sample review content for interface preview only. This is not a customer testimonial or a report of product performance.`,
         date: '2026-10-08',
-        verifiedPurchase: true,
+        verifiedPurchase: false,
       },
       {
         id: `rev-${p.id}-2`,
-        userName: 'Rameshwar Patidar',
+        userName: 'Demo Farmer (Sample)',
         rating: 4,
-        title: 'Reliable agricultural input, genuine batch',
-        comment: `Good product with clear batch details and manufacturing date. Excellent value compared to local retail prices. Will order again next season.`,
+        title: 'Sample product feedback placeholder',
+        comment: `Placeholder review for interface preview. No purchase, batch verification, or product outcome is represented.`,
         date: '2026-09-29',
-        verifiedPurchase: true,
+        verifiedPurchase: false,
       },
     ];
 
@@ -980,22 +943,22 @@ function enrichProducts(base: StoreProduct[]): StoreProduct[] {
       highlights: p.highlights ?? highlights,
       specifications: p.specifications ?? specifications,
       manufacturer: p.manufacturer ?? {
-        name: `${p.brand.replace(/ \(.*\)/, '')} Agritech Industries Ltd.`,
+        name: `${p.brand.replace(/ \(.*\)/, '')} (sample manufacturer record)`,
         originCountry: 'India',
-        address: 'National Agri-Corridor, Karnal / Ludhiana Industrial Cluster, India',
-        supportContact: 'Toll-Free Agri Helpline: 1800-180-1551 (Mon–Sat 9AM–6PM)',
+        address: 'Not provided — sample record only',
+        supportContact: 'No support channel connected in this demo',
       },
       seller: p.seller ?? {
         name: p.sellerName,
-        businessType: 'Verified Agricultural Hub & Cooperative Supplier',
-        returnPolicy: '7 Days Replacement for sealed input bags or defective equipment.',
-        sellerRating: 4.8,
+        businessType: 'Demo seller record — not verified',
+        returnPolicy: 'Illustrative only; no active return policy is connected.',
+        sellerRating: 0,
       },
       warranty: p.warranty ?? {
-        durationMonths: p.category.includes('kits') || p.category.includes('tools') || p.category.includes('Sprayers') ? 12 : 6,
-        warrantyType: p.category.includes('Seeds') ? 'Purity & Germination Assurance' : 'Manufacturer Defect Warranty',
-        coverage: 'Covers physical manufacturing defects, seal integrity, and FCO analytical standards.',
-        claimProcedure: 'Contact support with order ID and batch photos via the AgriSense Account / Orders desk.',
+        durationMonths: 0,
+        warrantyType: 'Not configured in this prototype',
+        coverage: 'No warranty or quality guarantee is active in this demo.',
+        claimProcedure: 'No support service is connected in this prototype.',
       },
       faqs: p.faqs ?? faqs,
       reviews: p.reviews ?? reviews,

@@ -3,51 +3,34 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   Sprout,
   Mail,
-  Lock,
   Phone,
   MapPin,
-  CheckCircle2,
+  ShieldCheck,
   AlertCircle,
-  Sparkles,
   ArrowRight,
   Tractor,
   Layers,
-  Store,
 } from 'lucide-react';
 import { AgriPulseLogo } from '../components/AgriPulseLogo';
 import { useAgriPulse } from '../context/AgriPulseContext';
 
 export const FarmerSignUpPage: React.FC = () => {
-  const { registerFarmer, loginAsFarmerDemo, loginAsSellerDemo } = useAgriPulse();
+  const { registerFarmer } = useAgriPulse();
   const navigate = useNavigate();
 
   const [name, setName] = useState('');
   const [mobile, setMobile] = useState('');
   const [email, setEmail] = useState('');
-  const [state, setState] = useState('Haryana');
-  const [district, setDistrict] = useState('Karnal');
-  const [village, setVillage] = useState('Taraori');
-  const [primaryCrop, setPrimaryCrop] = useState('Wheat');
-  const [landArea, setLandArea] = useState('6.5');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [state, setState] = useState('');
+  const [district, setDistrict] = useState('');
+  const [village, setVillage] = useState('');
+  const [primaryCrop, setPrimaryCrop] = useState('');
+  const [landArea, setLandArea] = useState('');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  const handleDemoFill = () => {
-    setName('Baldev Singh Gill');
-    setMobile('+91 98765 43210');
-    setEmail('baldev.farmer@agrisense.in');
-    setState('Punjab');
-    setDistrict('Ludhiana');
-    setVillage('Samrala');
-    setPrimaryCrop('Wheat');
-    setLandArea('10.0');
-    setPassword('Farm@2026!');
-    setConfirmPassword('Farm@2026!');
-    setErrorMsg(null);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,12 +44,12 @@ export const FarmerSignUpPage: React.FC = () => {
       setErrorMsg('Please enter a valid email address.');
       return;
     }
-    if (password.length < 6) {
-      setErrorMsg('Password must be at least 6 characters.');
+    if (password.length < 10) {
+      setErrorMsg('Create a password with at least 10 characters.');
       return;
     }
     if (password !== confirmPassword) {
-      setErrorMsg('Passwords do not match.');
+      setErrorMsg('The password confirmation does not match.');
       return;
     }
 
@@ -74,31 +57,14 @@ export const FarmerSignUpPage: React.FC = () => {
     try {
       const res = await registerFarmer({
         name: name.trim(),
-        mobile: mobile.trim() || '+91 98124 56780',
+        mobile: mobile.trim(),
         email: email.trim(),
-        state,
-        district,
-        village,
-        preferences: {
-          language: 'en',
-          preferredAreaUnit: 'acre',
-          bighaToAcreFactor: 0.25,
-          bighaRegionLabel: `${state} Local Bigha`,
-          defaultFarmId: 'farm-001',
-          defaultCrop: primaryCrop,
-          weatherLocation: {
-            state,
-            district,
-            locality: `${village} Gram Panchayat`,
-          },
-          notifications: {
-            weatherAlerts: true,
-            irrigationReminders: true,
-            cropInspectionAlerts: true,
-            orderUpdates: true,
-            schemeUpdates: true,
-          },
-        },
+        password,
+        state: state.trim(),
+        district: district.trim(),
+        village: village.trim(),
+        primaryCrop,
+        landArea,
       });
 
       if (res.ok) {
@@ -111,25 +77,7 @@ export const FarmerSignUpPage: React.FC = () => {
     }
   };
 
-  const handleInstantDemoFarmer = async () => {
-    setIsSubmitting(true);
-    try {
-      await loginAsFarmerDemo();
-      navigate('/home', { replace: true });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
-  const handleInstantDemoSeller = async () => {
-    setIsSubmitting(true);
-    try {
-      await loginAsSellerDemo();
-      navigate('/seller', { replace: true });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-warmbg flex flex-col justify-between">
@@ -142,14 +90,6 @@ export const FarmerSignUpPage: React.FC = () => {
           </span>
         </div>
         <div className="flex items-center gap-3 text-xs">
-          <button
-            type="button"
-            onClick={handleInstantDemoSeller}
-            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-forest-900 hover:bg-forest-800 text-forest-200 hover:text-white border border-forest-700 transition"
-          >
-            <Store className="w-3.5 h-3.5 text-amber-400" />
-            <span>Seller Central Demo</span>
-          </button>
           <Link
             to="/farmer/login"
             className="px-3.5 py-1.5 rounded-lg bg-leaf-600 hover:bg-leaf-500 text-white font-medium transition shadow-sm"
@@ -178,23 +118,7 @@ export const FarmerSignUpPage: React.FC = () => {
                 </p>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-2">
-                <button
-                  type="button"
-                  onClick={handleInstantDemoFarmer}
-                  className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-leaf-500 hover:bg-leaf-400 text-forest-950 font-bold text-xs transition shadow-md whitespace-nowrap"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  <span>1-Click Demo Farmer Login</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleDemoFill}
-                  className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-forest-800 hover:bg-forest-700 text-leaf-300 text-xs font-medium border border-forest-700 transition whitespace-nowrap"
-                >
-                  <span>Auto-Fill Sample Data</span>
-                </button>
-              </div>
+
             </div>
           </div>
 
@@ -209,6 +133,11 @@ export const FarmerSignUpPage: React.FC = () => {
                 </div>
               </div>
             )}
+
+            <div role="note" className="auth-security-note">
+              <ShieldCheck className="w-4 h-4" />
+              <p>This creates a server-backed farmer account and profile. Passwords are hashed by the API and are never saved in browser storage. Email verification and account recovery are not configured yet; use a unique password you do not use elsewhere.</p>
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
@@ -246,7 +175,37 @@ export const FarmerSignUpPage: React.FC = () => {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="farmer@agrisense.in"
+                  placeholder="farmer@example.com"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-forest-200 text-forest-950 text-sm focus:outline-none focus:ring-2 focus:ring-leaf-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-forest-900 mb-1.5">
+                  Password <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="password"
+                  required
+                  minLength={10}
+                  autoComplete="new-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="At least 10 characters"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-forest-200 text-forest-950 text-sm focus:outline-none focus:ring-2 focus:ring-leaf-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-forest-900 mb-1.5">
+                  Confirm password <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="password"
+                  required
+                  minLength={10}
+                  autoComplete="new-password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Enter the same password again"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-forest-200 text-forest-950 text-sm focus:outline-none focus:ring-2 focus:ring-leaf-500"
                 />
               </div>
@@ -259,6 +218,7 @@ export const FarmerSignUpPage: React.FC = () => {
                   onChange={(e) => setPrimaryCrop(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-forest-200 text-forest-950 text-sm focus:outline-none focus:ring-2 focus:ring-leaf-500 bg-white"
                 >
+                  <option value="" disabled>Select a crop (optional)</option>
                   <option value="Wheat">Wheat (Rabi)</option>
                   <option value="Rice (Paddy)">Rice / Paddy (Kharif)</option>
                   <option value="Cotton">Cotton</option>
@@ -274,7 +234,7 @@ export const FarmerSignUpPage: React.FC = () => {
                   required
                   value={state}
                   onChange={(e) => setState(e.target.value)}
-                  placeholder="Haryana"
+                  placeholder="e.g., Haryana"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-forest-200 text-forest-950 text-sm focus:outline-none focus:ring-2 focus:ring-leaf-500"
                 />
               </div>
@@ -287,7 +247,7 @@ export const FarmerSignUpPage: React.FC = () => {
                   required
                   value={district}
                   onChange={(e) => setDistrict(e.target.value)}
-                  placeholder="Karnal"
+                  placeholder="e.g., Karnal"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-forest-200 text-forest-950 text-sm focus:outline-none focus:ring-2 focus:ring-leaf-500"
                 />
               </div>
@@ -300,7 +260,7 @@ export const FarmerSignUpPage: React.FC = () => {
                   required
                   value={village}
                   onChange={(e) => setVillage(e.target.value)}
-                  placeholder="Taraori"
+                  placeholder="e.g., Taraori"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-forest-200 text-forest-950 text-sm focus:outline-none focus:ring-2 focus:ring-leaf-500"
                 />
               </div>
@@ -317,32 +277,7 @@ export const FarmerSignUpPage: React.FC = () => {
                   className="w-full px-3.5 py-2.5 rounded-xl border border-forest-200 text-forest-950 text-sm focus:outline-none focus:ring-2 focus:ring-leaf-500"
                 />
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-forest-900 mb-1.5">
-                  Password <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="At least 6 characters"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-forest-200 text-forest-950 text-sm focus:outline-none focus:ring-2 focus:ring-leaf-500"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-forest-900 mb-1.5">
-                  Confirm Password <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="password"
-                  required
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Re-enter password"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-forest-200 text-forest-950 text-sm focus:outline-none focus:ring-2 focus:ring-leaf-500"
-                />
-              </div>
+
             </div>
 
             <div className="pt-4 border-t border-forest-100 flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -355,18 +290,11 @@ export const FarmerSignUpPage: React.FC = () => {
 
               <div className="flex items-center gap-3 w-full sm:w-auto">
                 <button
-                  type="button"
-                  onClick={handleInstantDemoFarmer}
-                  className="px-4 py-2.5 rounded-xl border border-forest-200 hover:bg-forest-50 text-forest-800 text-xs font-semibold transition"
-                >
-                  Skip & Use Demo Farmer
-                </button>
-                <button
                   type="submit"
                   disabled={isSubmitting}
                   className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-forest-950 hover:bg-forest-900 text-white font-bold text-sm shadow-sm transition"
                 >
-                  <span>{isSubmitting ? 'Registering...' : 'Complete Farmer Registration'}</span>
+                  <span>{isSubmitting ? 'Creating account…' : 'Create Farmer Account'}</span>
                   <ArrowRight className="w-4 h-4 text-leaf-400" />
                 </button>
               </div>
@@ -377,7 +305,7 @@ export const FarmerSignUpPage: React.FC = () => {
 
       {/* Footer */}
       <footer className="text-center py-6 text-xs text-forest-600 border-t border-forest-100">
-        © 2026 AgriPulse Agricultural Intelligence.
+        © 2026 AGRIPULSE Agricultural Intelligence.
       </footer>
     </div>
   );

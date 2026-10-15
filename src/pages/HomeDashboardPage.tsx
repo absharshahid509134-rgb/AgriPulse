@@ -33,6 +33,7 @@ import {
   Landmark,
   Bot,
   Eye,
+  RadioTower,
 } from 'lucide-react';
 import { useAgriPulse } from '../context/AgriPulseContext';
 import {
@@ -68,6 +69,8 @@ export const HomeDashboardPage: React.FC = () => {
     weather,
     diseaseReports,
     orders,
+    cart,
+    devices,
     openChatWithPrompt,
   } = useAgriPulse();
 
@@ -78,7 +81,10 @@ export const HomeDashboardPage: React.FC = () => {
   const [editingActivity, setEditingActivity] = useState<FarmActivity | null>(null);
   const [actTitle, setActTitle] = useState('');
   const [actCategory, setActCategory] = useState<ActivityCategory>('Irrigation');
-  const [actDate, setActDate] = useState('2026-10-14');
+  const [actDate, setActDate] = useState(() => {
+    const now = new Date();
+    return new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
+  });
   const [actPriority, setActPriority] = useState<'Low' | 'Medium' | 'High'>('Medium');
   const [actPlotName, setActPlotName] = useState('');
   const [actCropName, setActCropName] = useState('');
@@ -86,33 +92,32 @@ export const HomeDashboardPage: React.FC = () => {
   const [activityFilter, setActivityFilter] = useState<'All' | 'Pending' | 'Completed'>('All');
 
   const activeFarmsList = useMemo(() => farms.filter((f) => !f.isArchived), [farms]);
+  const activeFarmDevices = useMemo(
+    () => (activeFarm ? devices.filter((device) => device.farmId === activeFarm.id && device.status !== 'retired') : []),
+    [devices, activeFarm]
+  );
   const preferredUnit = profile.preferences.preferredAreaUnit;
   const bighaFactor = profile.preferences.bighaToAcreFactor;
 
-  // 1. Total registered farm area across active farms
+  // Keep every dashboard metric scoped to the selected farm.
   const totalRegisteredArea = useMemo(() => {
-    const sum = activeFarmsList.reduce((acc, f) => {
-      return (
-        acc +
-        convertArea(
-          f.totalArea,
-          f.areaUnit,
-          preferredUnit,
-          f.bighaToAcreFactor || bighaFactor
-        )
-      );
-    }, 0);
-    return Number(sum.toFixed(2));
-  }, [activeFarmsList, preferredUnit, bighaFactor]);
+    if (!activeFarm) return 0;
+    return Number(convertArea(
+      activeFarm.totalArea,
+      activeFarm.areaUnit,
+      preferredUnit,
+      activeFarm.bighaToAcreFactor || bighaFactor
+    ).toFixed(2));
+  }, [activeFarm, preferredUnit, bighaFactor]);
 
   // Active farm filtered records
   const currentFarmPlots = useMemo(
-    () => (activeFarm ? plots.filter((p) => p.farmId === activeFarm.id) : plots),
+    () => (activeFarm ? plots.filter((p) => p.farmId === activeFarm.id) : []),
     [plots, activeFarm]
   );
 
   const currentFarmCrops = useMemo(
-    () => (activeFarm ? crops.filter((c) => c.farmId === activeFarm.id) : crops),
+    () => (activeFarm ? crops.filter((c) => c.farmId === activeFarm.id) : []),
     [crops, activeFarm]
   );
 
@@ -120,7 +125,7 @@ export const HomeDashboardPage: React.FC = () => {
     () =>
       (activeFarm
         ? observations.filter((o) => o.farmId === activeFarm.id)
-        : observations
+        : []
       ).sort((a, b) => new Date(b.recordedAt).getTime() - new Date(a.recordedAt).getTime()),
     [observations, activeFarm]
   );
@@ -142,17 +147,17 @@ export const HomeDashboardPage: React.FC = () => {
     const sorted = [...diseaseReports].sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
-    return sorted[0];
-  }, [diseaseReports]);
+    return sorted.find((report) => !activeFarm || report.farmId === activeFarm.id);
+  }, [diseaseReports, activeFarm]);
 
   const pendingActivities = useMemo(
-    () => activities.filter((a) => a.status === 'Pending'),
-    [activities]
+    () => activities.filter((a) => a.status === 'Pending' && (!activeFarm || a.farmId === activeFarm.id)),
+    [activities, activeFarm]
   );
 
   const completedActivities = useMemo(
-    () => activities.filter((a) => a.status === 'Completed'),
-    [activities]
+    () => activities.filter((a) => a.status === 'Completed' && (!activeFarm || a.farmId === activeFarm.id)),
+    [activities, activeFarm]
   );
 
   // Priority-based alerts derived from actual records
@@ -200,7 +205,7 @@ export const HomeDashboardPage: React.FC = () => {
     }
 
     // 3. Potential disease symptoms recorded
-    const openReport = diseaseReports.find((r) => r.status === 'Needs inspection');
+    const openReport = diseaseReports.find((r) => r.status === 'Needs inspection' && (!activeFarm || r.farmId === activeFarm.id));
     if (openReport) {
       list.push({
         id: `alert-dis-${openReport.id}`,
@@ -242,11 +247,11 @@ export const HomeDashboardPage: React.FC = () => {
     }
 
     return list;
-  }, [weather, currentFarmObs, diseaseReports, pendingActivities, orders]);
+  }, [weather, currentFarmObs, diseaseReports, pendingActivities, orders, activeFarm]);
 
   // Chart 1: Soil Moisture History from saved observations
   const moistureChartData = useMemo(() => {
-    const withMoisture = [...observations]
+    const withMoisture = [...currentFarmObs]
       .filter((o) => typeof o.soilMoisturePct === 'number')
       .sort((a, b) => new Date(a.recordedAt).getTime() - new Date(b.recordedAt).getTime());
 
@@ -256,7 +261,7 @@ export const HomeDashboardPage: React.FC = () => {
       moisturePct: o.soilMoisturePct,
       soilTempC: o.soilTempC ?? 24,
     }));
-  }, [observations]);
+  }, [currentFarmObs]);
 
   // Chart 2: Weekly Weather & Rainfall Forecast
   const weatherChartData = useMemo(() => {
@@ -271,17 +276,17 @@ export const HomeDashboardPage: React.FC = () => {
 
   // Chart 3: Activities Completed vs Pending + Crop Health breakdown
   const statusBreakdownData = useMemo(() => {
-    const healthyCount = crops.filter((c) => c.healthStatus === 'Healthy').length;
-    const watchCount = crops.filter((c) => c.healthStatus === 'Watch / Mild Stress').length;
-    const inspectCount = crops.filter((c) => c.healthStatus === 'Needs Inspection').length;
+    const healthyCount = currentFarmCrops.filter((c) => c.healthStatus === 'Healthy').length;
+    const watchCount = currentFarmCrops.filter((c) => c.healthStatus === 'Watch / Mild Stress').length;
+    const inspectCount = currentFarmCrops.filter((c) => c.healthStatus === 'Needs Inspection').length;
 
     return [
-      { name: 'Tasks Pending', count: pendingActivities.length, color: '#d69d37' },
-      { name: 'Tasks Done', count: completedActivities.length, color: '#2b674c' },
-      { name: 'Healthy Crops', count: healthyCount, color: '#37a656' },
-      { name: 'Watch / Stress', count: watchCount + inspectCount, color: '#dc2626' },
+      { name: 'Tasks Pending', count: pendingActivities.length, color: '#c78a2f' },
+      { name: 'Tasks Done', count: completedActivities.length, color: '#387333' },
+      { name: 'Healthy Crops', count: healthyCount, color: '#65a650' },
+      { name: 'Watch / Stress', count: watchCount + inspectCount, color: '#c84e48' },
     ];
-  }, [pendingActivities, completedActivities, crops]);
+  }, [pendingActivities, completedActivities, currentFarmCrops]);
 
   const openNewActivityModal = () => {
     setEditingActivity(null);
@@ -343,18 +348,22 @@ export const HomeDashboardPage: React.FC = () => {
   const filteredActivities = useMemo(() => {
     return activities
       .filter((a) => {
+        if (activeFarm && a.farmId !== activeFarm.id) return false;
         if (activityFilter === 'Pending') return a.status === 'Pending';
         if (activityFilter === 'Completed') return a.status === 'Completed';
         return true;
       })
       .sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate));
-  }, [activities, activityFilter]);
+  }, [activities, activityFilter, activeFarm]);
+
+  const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const activeDemoOrders = orders.filter((order) => ['Placed', 'Processing', 'Dispatched'].includes(order.orderStatus)).length;
 
   return (
-    <div className="space-y-6">
+    <div className="dashboard-page space-y-6">
       {/* 1. Welcome Banner & Active Farm Switcher */}
-      <section className="bg-forest-900 text-white rounded-2xl p-5 sm:p-6 shadow-sm border border-forest-800 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div>
+      <section className="dashboard-hero bg-forest-900 text-white rounded-2xl p-5 sm:p-6 shadow-sm border border-forest-800 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="dashboard-hero-copy">
           <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-forest-800 border border-forest-700 text-leaf-300 text-[11px] font-semibold mb-2">
             <MapPin className="w-3.5 h-3.5" />
             <span>
@@ -363,7 +372,7 @@ export const HomeDashboardPage: React.FC = () => {
                 : `${profile.village}, ${profile.district}, ${profile.state}`}
             </span>
             <span className="text-forest-400">•</span>
-            <span>Demo Farmer Profile</span>
+            <span>{profile.isDemoAccount ? 'Demo workspace' : 'Farmer workspace'}</span>
           </div>
           <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight">
             {getTimeOfDayGreeting()}, {profile.name}
@@ -374,7 +383,7 @@ export const HomeDashboardPage: React.FC = () => {
         </div>
 
         {/* Active Farm Selector */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-forest-950/70 border border-forest-800 p-3 rounded-xl">
+        <div className="dashboard-farm-switcher flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-forest-950/70 border border-forest-800 p-3 rounded-xl">
           <div>
             <label
               htmlFor="dashboard-active-farm-select"
@@ -410,17 +419,17 @@ export const HomeDashboardPage: React.FC = () => {
       </section>
 
       {/* 2. Quick Actions Bar */}
-      <section aria-label="Quick Farm Actions">
+      <section className="dashboard-quick-actions" aria-label="Quick Farm Actions">
         <div className="flex items-center justify-between mb-2.5">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
             Quick Actions
           </h3>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5">
+        <div className="dashboard-quick-grid grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-3">
           <button
             type="button"
             onClick={() => navigate('/farm?tab=farms&action=new')}
-            className="flex items-center gap-2 p-3 rounded-xl bg-white hover:bg-forest-50 border border-slate-200 hover:border-forest-300 text-left transition-all shadow-sm"
+            className="dashboard-quick-action flex items-center gap-2.5 p-3.5 rounded-xl bg-white hover:bg-forest-50 border border-slate-200 hover:border-forest-300 text-left transition-all shadow-sm"
           >
             <div className="p-2 rounded-lg bg-forest-100 text-forest-800">
               <Tractor className="w-4 h-4" />
@@ -431,7 +440,7 @@ export const HomeDashboardPage: React.FC = () => {
           <button
             type="button"
             onClick={() => navigate('/farm?tab=observations&action=new')}
-            className="flex items-center gap-2 p-3 rounded-xl bg-white hover:bg-forest-50 border border-slate-200 hover:border-forest-300 text-left transition-all shadow-sm"
+            className="dashboard-quick-action flex items-center gap-2.5 p-3.5 rounded-xl bg-white hover:bg-forest-50 border border-slate-200 hover:border-forest-300 text-left transition-all shadow-sm"
           >
             <div className="p-2 rounded-lg bg-leaf-100 text-leaf-800">
               <Eye className="w-4 h-4" />
@@ -444,7 +453,7 @@ export const HomeDashboardPage: React.FC = () => {
           <button
             type="button"
             onClick={() => navigate('/weather')}
-            className="flex items-center gap-2 p-3 rounded-xl bg-white hover:bg-forest-50 border border-slate-200 hover:border-forest-300 text-left transition-all shadow-sm"
+            className="dashboard-quick-action flex items-center gap-2.5 p-3.5 rounded-xl bg-white hover:bg-forest-50 border border-slate-200 hover:border-forest-300 text-left transition-all shadow-sm"
           >
             <div className="p-2 rounded-lg bg-sky-100 text-sky-800">
               <CloudSun className="w-4 h-4" />
@@ -455,7 +464,7 @@ export const HomeDashboardPage: React.FC = () => {
           <button
             type="button"
             onClick={() => navigate('/disease')}
-            className="flex items-center gap-2 p-3 rounded-xl bg-white hover:bg-forest-50 border border-slate-200 hover:border-forest-300 text-left transition-all shadow-sm"
+            className="dashboard-quick-action flex items-center gap-2.5 p-3.5 rounded-xl bg-white hover:bg-forest-50 border border-slate-200 hover:border-forest-300 text-left transition-all shadow-sm"
           >
             <div className="p-2 rounded-lg bg-emerald-100 text-emerald-800">
               <BookOpen className="w-4 h-4" />
@@ -468,7 +477,7 @@ export const HomeDashboardPage: React.FC = () => {
           <button
             type="button"
             onClick={() => navigate('/store')}
-            className="flex items-center gap-2 p-3 rounded-xl bg-white hover:bg-forest-50 border border-slate-200 hover:border-forest-300 text-left transition-all shadow-sm"
+            className="dashboard-quick-action flex items-center gap-2.5 p-3.5 rounded-xl bg-white hover:bg-forest-50 border border-slate-200 hover:border-forest-300 text-left transition-all shadow-sm"
           >
             <div className="p-2 rounded-lg bg-harvest-100 text-harvest-800">
               <ShoppingBag className="w-4 h-4" />
@@ -479,7 +488,7 @@ export const HomeDashboardPage: React.FC = () => {
           <button
             type="button"
             onClick={() => navigate('/schemes')}
-            className="flex items-center gap-2 p-3 rounded-xl bg-white hover:bg-forest-50 border border-slate-200 hover:border-forest-300 text-left transition-all shadow-sm"
+            className="dashboard-quick-action flex items-center gap-2.5 p-3.5 rounded-xl bg-white hover:bg-forest-50 border border-slate-200 hover:border-forest-300 text-left transition-all shadow-sm"
           >
             <div className="p-2 rounded-lg bg-earth-100 text-earth-800">
               <Landmark className="w-4 h-4" />
@@ -491,8 +500,17 @@ export const HomeDashboardPage: React.FC = () => {
 
           <button
             type="button"
+            onClick={() => navigate('/devices')}
+            className="dashboard-quick-action flex items-center gap-2.5 p-3.5 rounded-xl bg-white hover:bg-forest-50 border border-slate-200 hover:border-forest-300 text-left transition-all shadow-sm"
+          >
+            <div className="p-2 rounded-lg bg-forest-100 text-forest-800"><RadioTower className="w-4 h-4" /></div>
+            <span className="text-xs font-bold text-slate-800 leading-tight">Devices & IoT</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => openChatWithPrompt('What should I check on my farm today?')}
-            className="col-span-2 sm:col-span-1 flex items-center gap-2 p-3 rounded-xl bg-forest-800 hover:bg-forest-900 text-white text-left transition-all shadow-sm"
+            className="dashboard-quick-action flex items-center gap-2.5 p-3.5 rounded-xl bg-forest-800 hover:bg-forest-900 text-white text-left transition-all shadow-sm"
           >
             <div className="p-2 rounded-lg bg-leaf-500/20 text-leaf-300">
               <Bot className="w-4 h-4" />
@@ -502,131 +520,43 @@ export const HomeDashboardPage: React.FC = () => {
         </div>
       </section>
 
-      {/* 3. Six Summary Cards */}
-      <section
-        aria-label="Key Farm Summary Metrics"
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3.5"
-      >
-        {/* Card 1: Total Registered Farm Area */}
-        <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-sm flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-              Total Farm Area
-            </span>
-            <Tractor className="w-4 h-4 text-forest-700" />
-          </div>
-          <div className="my-2">
-            <span className="text-2xl font-extrabold text-slate-900">
-              {totalRegisteredArea}
-            </span>{' '}
-            <span className="text-xs font-semibold text-slate-600 uppercase">
-              {preferredUnit}s
-            </span>
-          </div>
-          <p className="text-[11px] text-slate-500">
-            Calculated from {activeFarmsList.length} saved farm(s)
-          </p>
-        </div>
+      {/* 3. Six saved-record farm summary cards */}
+      <section aria-label="Key Farm Summary Metrics" className="dashboard-metrics-grid grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6 gap-4">
+        <article className="metric-card">
+          <div className="metric-card-heading"><span className="metric-icon"><Tractor size={17} /></span><span>Farm area</span></div>
+          <div className="metric-value-row"><strong>{totalRegisteredArea}</strong><span>{preferredUnit}{totalRegisteredArea === 1 ? '' : 's'}</span></div>
+          <p>{activeFarm?.name || 'No active farm selected'}</p>
+        </article>
 
-        {/* Card 2: Active Farms & Plots */}
-        <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-sm flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-              Farms & Plots
-            </span>
-            <MapPin className="w-4 h-4 text-leaf-600" />
-          </div>
-          <div className="my-2">
-            <span className="text-2xl font-extrabold text-slate-900">
-              {activeFarmsList.length}
-            </span>{' '}
-            <span className="text-xs font-semibold text-slate-600">Farms</span>
-            <span className="mx-1.5 text-slate-300">/</span>
-            <span className="text-xl font-bold text-forest-800">{plots.length}</span>{' '}
-            <span className="text-xs font-semibold text-slate-600">Plots</span>
-          </div>
-          <p className="text-[11px] text-slate-500">
-            {currentFarmPlots.length} plots on active farm
-          </p>
-        </div>
+        <article className="metric-card">
+          <div className="metric-card-heading"><span className="metric-icon metric-icon--leaf"><Sprout size={17} /></span><span>Crops in focus</span></div>
+          <div className="metric-value-row"><strong>{currentFarmCrops.length}</strong><span>active crop records</span></div>
+          <p>{currentFarmCrops.length ? Array.from(new Set(currentFarmCrops.map((crop) => crop.growthStage.split(' ')[0]))).slice(0, 2).join(' · ') : 'Add crops in Farm Management'}</p>
+        </article>
 
-        {/* Card 3: Main Crops Cultivated */}
-        <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-sm flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-              Active Crops
-            </span>
-            <Sprout className="w-4 h-4 text-leaf-600" />
-          </div>
-          <div className="my-2">
-            <span className="text-2xl font-extrabold text-slate-900">{crops.length}</span>{' '}
-            <span className="text-xs font-semibold text-slate-600">Crop Records</span>
-          </div>
-          <p className="text-[11px] text-slate-600 truncate">
-            {crops.length > 0
-              ? Array.from(new Set(crops.map((c) => c.cropName.split(' ')[0]))).join(', ')
-              : 'No crops added yet'}
-          </p>
-        </div>
+        <article className="metric-card">
+          <div className="metric-card-heading"><span className="metric-icon metric-icon--water"><Droplets size={17} /></span><span>Soil moisture</span></div>
+          <div className="metric-value-row"><strong>{latestMoistureObs?.soilMoisturePct !== undefined ? `${latestMoistureObs.soilMoisturePct}%` : '—'}</strong><span>{latestMoistureObs ? 'last recorded' : 'no record yet'}</span></div>
+          <p>{latestMoistureObs ? `Farmer recorded · ${latestMoistureObs.plotName || 'active farm'}` : 'No manual moisture observation'}{activeFarmDevices.length ? ` · ${activeFarmDevices.length} device record${activeFarmDevices.length === 1 ? '' : 's'} in Devices` : ''}</p>
+        </article>
 
-        {/* Card 4: Current Weather */}
-        <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-sm flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-              Weather ({weather.district})
-            </span>
-            <CloudSun className="w-4 h-4 text-harvest-600" />
-          </div>
-          <div className="my-2 flex items-baseline gap-2">
-            <span className="text-2xl font-extrabold text-slate-900">{weather.tempC}°C</span>
-            <span className="text-xs font-semibold text-slate-600 truncate">
-              {weather.condition}
-            </span>
-          </div>
-          <p className="text-[10px] font-semibold text-amber-800 bg-amber-50 px-2 py-0.5 rounded w-fit">
-            {weather.sourceType}
-          </p>
-        </div>
+        <article className="metric-card">
+          <div className="metric-card-heading"><span className="metric-icon metric-icon--amber"><CalendarCheck size={17} /></span><span>Field activities</span></div>
+          <div className="metric-value-row"><strong>{pendingActivities.length}</strong><span>pending tasks</span></div>
+          <p>{pendingActivities.filter((task) => task.priority === 'High').length} high priority · {completedActivities.length} completed</p>
+        </article>
 
-        {/* Card 5: Crop Disease Encyclopedia */}
-        <div
-          onClick={() => navigate('/disease')}
-          className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-sm flex flex-col justify-between cursor-pointer hover:border-forest-300 transition-colors"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-              Crop Diseases
-            </span>
-            <BookOpen className="w-4 h-4 text-emerald-600" />
-          </div>
-          <div className="my-2">
-            <span className="text-sm font-bold text-slate-900 block truncate">
-              100 Crop Diseases
-            </span>
-          </div>
-          <p className="text-[11px] text-slate-500">
-            Scientific pathology index & IDM guide
-          </p>
-        </div>
+        <article className="metric-card">
+          <div className="metric-card-heading"><span className="metric-icon metric-icon--sun"><CloudSun size={17} /></span><span>Local weather</span></div>
+          <div className="metric-value-row"><strong>{weather.tempC}°</strong><span>{weather.condition}</span></div>
+          <p>{weather.rainProbabilityPct}% rain probability · {weather.sourceType}</p>
+        </article>
 
-        {/* Card 6: Upcoming Farm Activities */}
-        <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-sm flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-              Upcoming Tasks
-            </span>
-            <CalendarCheck className="w-4 h-4 text-forest-700" />
-          </div>
-          <div className="my-2">
-            <span className="text-2xl font-extrabold text-slate-900">
-              {pendingActivities.length}
-            </span>{' '}
-            <span className="text-xs font-semibold text-slate-600">Pending</span>
-          </div>
-          <p className="text-[11px] text-slate-500">
-            {completedActivities.length} completed in calendar
-          </p>
-        </div>
+        <article className="metric-card">
+          <div className="metric-card-heading"><span className="metric-icon metric-icon--store"><ShoppingBag size={17} /></span><span>Store activity</span></div>
+          <div className="metric-value-row"><strong>{cartItemCount}</strong><span>items in cart</span></div>
+          <p>{activeDemoOrders} active demo {activeDemoOrders === 1 ? 'order' : 'orders'}</p>
+        </article>
       </section>
 
       {/* 4. Farm Condition Overview & Weather Preview Grid */}
@@ -640,11 +570,11 @@ export const HomeDashboardPage: React.FC = () => {
                   Farm Condition Overview — {activeFarm?.name || 'All Farms'}
                 </h3>
                 <p className="text-xs text-slate-500">
-                  Values sourced from your manual field observations & saved demo records (Hardware sensors: Not connected)
+                  This panel uses farmer-entered observations and crop records; device telemetry is shown separately in Devices & IoT.
                 </p>
               </div>
               <span className="text-[10px] font-bold uppercase px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
-                Sensor Hardware: Not Connected (Last Recorded / Demo Data)
+                {activeFarmDevices.length} device record{activeFarmDevices.length === 1 ? '' : 's'} · telemetry shown separately
               </span>
             </div>
 
@@ -657,7 +587,7 @@ export const HomeDashboardPage: React.FC = () => {
                     Soil Moisture
                   </span>
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-bold">
-                    {latestMoistureObs ? 'Last Recorded' : 'Not Connected'}
+                    {latestMoistureObs ? (latestMoistureObs.sourceLabel || 'Last Recorded') : 'No observation'}
                   </span>
                 </div>
                 <p className="text-xl font-extrabold text-slate-900 mt-2">
@@ -723,9 +653,7 @@ export const HomeDashboardPage: React.FC = () => {
                 <div className="flex items-center justify-between text-xs font-semibold text-slate-600">
                   <span>Last Field Inspection</span>
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-700 font-bold">
-                    {latestInspectionObs?.sourceLabel === 'Farmer Recorded'
-                      ? 'Farmer Log'
-                      : 'Demo Data'}
+                    {latestInspectionObs?.sourceLabel || (latestInspectionObs ? 'Saved record' : 'Not recorded')}
                   </span>
                 </div>
                 <p className="text-sm font-bold text-slate-900 mt-2">
@@ -1294,7 +1222,7 @@ export const HomeDashboardPage: React.FC = () => {
               Activities & Crop Health Summary
             </h3>
             <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-forest-50 text-forest-800">
-              Live Count
+              {profile.isDemoAccount ? 'Development Demo Records' : 'Account Records'}
             </span>
           </div>
           <p className="text-[11px] text-slate-500 mb-4">

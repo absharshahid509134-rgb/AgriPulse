@@ -11,6 +11,9 @@ import {
   FarmerProfile,
   FarmPlot,
   FieldObservation,
+  IoTDevice,
+  DeviceEvent,
+  TelemetryReading,
   RainfallLog,
   SellerProfile,
   StoreProduct,
@@ -30,6 +33,9 @@ import {
 } from '../data/seedFarmData';
 import { ENRICHED_STORE_PRODUCTS } from '../data/seedProducts';
 import { SEED_DEMO_ORDERS } from '../data/seedNewsAndSchemes';
+import { SEED_DEVICES, SEED_DEVICE_EVENTS } from '../data/seedDevices';
+
+const DEMO_STORAGE_ENABLED = import.meta.env.DEV;
 
 export const STORAGE_KEYS = {
   SESSION: 'AgriPulse:v1:session',
@@ -41,6 +47,10 @@ export const STORAGE_KEYS = {
   OBSERVATIONS: 'AgriPulse:v1:observations',
   ACTIVITIES: 'AgriPulse:v1:activities',
   WEATHER: 'AgriPulse:v1:weather',
+  DEVICES: 'AgriPulse:v1:devices',
+  DEVICE_EVENTS: 'AgriPulse:v1:deviceEvents',
+  TELEMETRY_CACHE: 'AgriPulse:v1:telemetryCache',
+  DEVICE_DRAFT: 'AgriPulse:v1:deviceRegistrationDraft',
   RAINFALL_LOGS: 'AgriPulse:v1:rainfallLogs',
   DISEASE_REPORTS: 'AgriPulse:v1:diseaseReports',
   DICT_BOOKMARKS: 'AgriPulse:v1:dictionaryBookmarks',
@@ -61,6 +71,7 @@ export function safeReadStorage<T>(
   fallbackValue: T,
   validator?: (val: unknown) => val is T
 ): T {
+  if (!DEMO_STORAGE_ENABLED) return fallbackValue;
   try {
     const raw = window.localStorage.getItem(key);
     if (raw === null) {
@@ -92,6 +103,7 @@ export function safeReadStorage<T>(
 }
 
 export function safeWriteStorage<T>(key: string, value: T): void {
+  if (!DEMO_STORAGE_ENABLED) return;
   try {
     window.localStorage.setItem(key, JSON.stringify(value));
   } catch (err) {
@@ -107,7 +119,7 @@ export const INITIAL_CHAT_MESSAGES: ChatMessage[] = [
   {
     id: 'msg-welcome-01',
     sender: 'assistant',
-    text: 'Namaste! I am AGRISENSE AI (running in Farm Digital Twin Guidance mode). I have access to your saved farms, active crop records, field observations, 7-day weather forecast, 52-term agricultural dictionary, store catalog, and government schemes. How can I help you today?',
+    text: 'Namaste! I am AGRIPULSE AI (running in Farm Digital Twin Guidance mode). I have access to your saved farms, active crop records, field observations, 7-day weather forecast, 52-term agricultural dictionary, store catalog, and government schemes. How can I help you today?',
     timestamp: '2026-10-13T06:00:00.000Z',
     modeLabel: 'Demo Rule-Based Guidance',
     suggestedLinks: [
@@ -156,6 +168,9 @@ export function loadInitialDataSnapshot() {
     (v): v is WeatherSnapshot =>
       isObject<WeatherSnapshot>(v) && Array.isArray((v as WeatherSnapshot).daily)
   );
+  const devices = safeReadStorage<IoTDevice[]>(STORAGE_KEYS.DEVICES, SEED_DEVICES, isArray);
+  const deviceEvents = safeReadStorage<DeviceEvent[]>(STORAGE_KEYS.DEVICE_EVENTS, SEED_DEVICE_EVENTS, isArray);
+  const telemetryCache = safeReadStorage<TelemetryReading[]>(STORAGE_KEYS.TELEMETRY_CACHE, [], isArray);
   const rainfallLogs = safeReadStorage<RainfallLog[]>(
     STORAGE_KEYS.RAINFALL_LOGS,
     SEED_RAINFALL_LOGS,
@@ -228,6 +243,9 @@ export function loadInitialDataSnapshot() {
     observations,
     activities,
     weather,
+    devices,
+    deviceEvents,
+    telemetryCache,
     rainfallLogs,
     diseaseReports,
     dictBookmarks,
@@ -244,6 +262,7 @@ export function loadInitialDataSnapshot() {
 }
 
 export function readAuthSession(): AuthSession | null {
+  if (!DEMO_STORAGE_ENABLED) return null;
   try {
     const raw = window.localStorage.getItem(STORAGE_KEYS.SESSION);
     if (!raw) return null;
@@ -263,6 +282,7 @@ export function readAuthSession(): AuthSession | null {
 }
 
 export function writeAuthSession(session: AuthSession | null): void {
+  if (!DEMO_STORAGE_ENABLED) return;
   try {
     if (!session) {
       window.localStorage.removeItem(STORAGE_KEYS.SESSION);
@@ -283,6 +303,10 @@ export function resetAllDemoDataToSeed(): void {
   safeWriteStorage(STORAGE_KEYS.OBSERVATIONS, SEED_OBSERVATIONS);
   safeWriteStorage(STORAGE_KEYS.ACTIVITIES, SEED_ACTIVITIES);
   safeWriteStorage(STORAGE_KEYS.WEATHER, SEED_WEATHER_SNAPSHOT);
+  safeWriteStorage(STORAGE_KEYS.DEVICES, SEED_DEVICES);
+  safeWriteStorage(STORAGE_KEYS.DEVICE_EVENTS, SEED_DEVICE_EVENTS);
+  safeWriteStorage(STORAGE_KEYS.TELEMETRY_CACHE, []);
+  safeWriteStorage(STORAGE_KEYS.DEVICE_DRAFT, null);
   safeWriteStorage(STORAGE_KEYS.RAINFALL_LOGS, SEED_RAINFALL_LOGS);
   safeWriteStorage(STORAGE_KEYS.DISEASE_REPORTS, SEED_DISEASE_REPORTS);
   safeWriteStorage(STORAGE_KEYS.DICT_BOOKMARKS, ['dict-06', 'dict-18', 'dict-30', 'dict-50']);

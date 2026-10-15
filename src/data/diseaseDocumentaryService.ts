@@ -129,7 +129,7 @@ const CURATED_DOSSIERS: Record<number, Partial<CropDiseaseDocumentary>> = {
     realLifeCaseStudy:
       'During the 2017 Kharif season in the Godavari delta, sudden overcast weather combined with untimely October rains triggered severe neck blast in late-planted crops. Farmers who implemented prompt prophylactic tricyclazole sprays at 5% boot leaf emergence protected over 82% of potential yield compared to untreated control plots.',
     latestResearchAndAiDetection:
-      'Computer vision deep learning pipelines utilizing MobileNetV3 and ResNet-50 models have achieved over 96.4% diagnostic accuracy on field smartphone photos. Satellite and UAV multispectral indices (Normalized Difference Vegetation Index & Red-Edge Chlorophyll Index) are now used to map micro-canopy stress 48 hours prior to visible neck lesion collapse.',
+      'This AGRIPULSE prototype does not include a trained image-recognition model or validated diagnostic-accuracy metric. Treat any image-based indication as a prompt for field inspection, not a confirmed diagnosis; consult a qualified local plant-health professional.',
     referencesAndSources: [
       'ICAR - Indian Institute of Rice Research (ICAR-IIRR) Pathology Technical Bulletins',
       'International Rice Research Institute (IRRI) Rice Knowledge Bank',
@@ -288,7 +288,7 @@ const CURATED_DOSSIERS: Record<number, Partial<CropDiseaseDocumentary>> = {
     realLifeCaseStudy:
       'In Punjab during 2012, a breakdown of resistance in the dominant mega-variety PBW-343 led to rapid yellow rust spread. Prompt release and distribution of newer resistant varieties like HD-3086 successfully averted future regional crop failures.',
     latestResearchAndAiDetection:
-      'AI models trained on multi-scale CNN architectures accurately distinguish yellow rust from nutritional magnesium chlorosis on mobile camera feeds with over 97% F1-score.',
+      'This AGRIPULSE prototype does not run a validated computer-vision model or claim an accuracy score. Distinguish rust from nutrient stress with field inspection and qualified local guidance.',
     referencesAndSources: [
       'ICAR - Indian Institute of Wheat and Barley Research (IIWBR)',
       'Punjab Agricultural University (PAU) Crop Production & Protection Guide',
@@ -453,7 +453,7 @@ export function getDiseaseDocumentary(item: CropDiseaseItem): CropDiseaseDocumen
 
   const latestResearchAndAiDetection =
     curated.latestResearchAndAiDetection ||
-    `Recent advancements utilize convolutional neural networks (CNNs) and vision transformers trained on thousands of plant pathology image datasets to classify early symptoms of ${item.disease} from mobile smartphone photographs with high diagnostic accuracy. Multispectral drone imaging enables early canopy stress mapping.`;
+    `No trained image-recognition model or validated diagnostic-accuracy metric is included in this AGRIPULSE prototype. Use image observations only as a prompt for manual inspection and seek expert confirmation for crop-specific diagnosis.`;
 
   const referencesAndSources =
     curated.referencesAndSources || [

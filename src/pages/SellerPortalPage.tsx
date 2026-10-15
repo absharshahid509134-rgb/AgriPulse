@@ -51,6 +51,8 @@ const PRODUCT_CATEGORIES: ProductCategory[] = [
 export const SellerPortalPage: React.FC = () => {
   const {
     session,
+    workspaceSyncStatus,
+    workspaceSyncError,
     sellerProfile,
     updateSellerProfile,
     products,
@@ -74,7 +76,7 @@ export const SellerPortalPage: React.FC = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newProdName, setNewProdName] = useState('');
   const [newProdCategory, setNewProdCategory] = useState<ProductCategory>('Seeds and planting material');
-  const [newProdBrand, setNewProdBrand] = useState('Karnal Kisan Agro (Co-op)');
+  const [newProdBrand, setNewProdBrand] = useState(sellerProfile.businessName || 'Your business brand');
   const [newProdPackSize, setNewProdPackSize] = useState('40 kg Bag');
   const [newProdPriceRs, setNewProdPriceRs] = useState('1450');
   const [newProdMrpRs, setNewProdMrpRs] = useState('1650');
@@ -138,9 +140,8 @@ export const SellerPortalPage: React.FC = () => {
     return orders.filter((o) => o.orderStatus === orderStatusFilter);
   }, [orders, orderStatusFilter]);
 
-  const handleSwitchToFarmerPortal = () => {
-    switchPortal('farmer');
-    navigate('/home');
+  const handleSwitchToFarmerPortal = async () => {
+    if (await switchPortal('farmer')) navigate('/home');
   };
 
   const handleCreateProduct = (e: React.FormEvent) => {
@@ -155,32 +156,36 @@ export const SellerPortalPage: React.FC = () => {
       name: newProdName.trim(),
       category: newProdCategory,
       brand: newProdBrand.trim(),
-      isSampleBrand: true,
+      isSampleBrand: Boolean(session?.isDemo),
       packSize: newProdPackSize.trim(),
       pricePaise,
       mrpPaise,
       stockCount,
       availability: stockCount > 0 ? 'In Stock' : 'Out of Stock',
-      sellerName: `${sellerProfile.businessName} (Demo Seller)`,
-      isDemoSeller: true,
+      sellerName: session?.isDemo ? `${sellerProfile.businessName} (Demo Seller)` : sellerProfile.businessName,
+      isDemoSeller: Boolean(session?.isDemo),
       compatibleCrops: ['Wheat (गेहूं)', 'Rice / Paddy (धान)', 'Mustard (सरसों)', 'Vegetables'],
       seasonTag: 'All Season',
       shortDescription:
         newProdShortDesc.trim() ||
-        `High-quality certified ${newProdName.trim()} supplied by ${sellerProfile.businessName}.`,
+        (session?.isDemo
+          ? `Demo listing for ${newProdName.trim()} from ${sellerProfile.businessName}. Certification and quality are not verified.`
+          : `Seller draft for ${newProdName.trim()} from ${sellerProfile.businessName}. Product claims and certifications have not been verified.`),
       detailedDescription:
         newProdShortDesc.trim() ||
-        `Direct dispatch from ${sellerProfile.businessName} warehouse. Tested for purity and compliance with certified germination guidelines.`,
+        (session?.isDemo
+          ? 'Illustrative sample copy only. No warehouse, product testing, or certification is verified.'
+          : 'Seller-provided draft copy. Product claims and certifications must be verified before publication.'),
       usageInstructions:
         newProdUsage.trim() || 'Follow recommended agronomic package of practices for optimal crop emergence.',
       storageInstructions: 'Store in a dry, rodent-safe godown on raised wooden pallets.',
-      shippingEstimateDays: 'Estimated 2–4 days (Demo Delivery)',
+      shippingEstimateDays: session?.isDemo ? 'Estimated 2–4 days (Demo Delivery)' : 'Shipping provider not connected',
       imageSvgType: newProdSvgType,
       isFeatured: false,
       isPopular: true,
       isNewArrival: true,
-      rating: 4.8,
-      reviewCount: 12,
+      rating: 0,
+      reviewCount: 0,
     });
 
     setShowAddModal(false);
@@ -226,7 +231,7 @@ export const SellerPortalPage: React.FC = () => {
                   Seller Central Hub
                 </span>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                  Live Vendor Portal
+                  {session?.isDemo ? 'Development Demo Workspace' : 'Seller account'}
                 </span>
               </div>
               <p className="text-[11px] text-forest-300 truncate max-w-xs">
@@ -237,24 +242,26 @@ export const SellerPortalPage: React.FC = () => {
 
           {/* Quick Actions / Portal Switcher */}
           <div className="flex items-center gap-2 sm:gap-3 text-xs">
-            <Link
-              to="/store"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-forest-900 hover:bg-forest-800 text-forest-200 hover:text-white border border-forest-700 transition"
-              title="See how products appear in the farmer store catalog"
-            >
-              <Eye className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="hidden md:inline">Preview Farmer Store</span>
-            </Link>
+            {session?.isDemo && <>
+              <Link
+                to="/store"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-forest-900 hover:bg-forest-800 text-forest-200 hover:text-white border border-forest-700 transition"
+                title="See how sample products appear in the farmer store"
+              >
+                <Eye className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="hidden md:inline">Preview Farmer Store</span>
+              </Link>
 
-            <button
-              type="button"
-              onClick={handleSwitchToFarmerPortal}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-leaf-600 hover:bg-leaf-500 text-white font-semibold transition shadow-sm"
-              title="Open Farmer Dashboard & Digital Twin"
-            >
-              <Sprout className="w-3.5 h-3.5 text-amber-300" />
-              <span>Switch to Farmer Portal</span>
-            </button>
+              <button
+                type="button"
+                onClick={handleSwitchToFarmerPortal}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-leaf-600 hover:bg-leaf-500 text-white font-semibold transition shadow-sm"
+                title="Open the development Farmer workspace"
+              >
+                <Sprout className="w-3.5 h-3.5 text-amber-300" />
+                <span>Switch to Farmer Portal</span>
+              </button>
+            </>}
 
             <button
               type="button"
@@ -309,7 +316,7 @@ export const SellerPortalPage: React.FC = () => {
             }`}
           >
             <Truck className="w-4 h-4" />
-            <span>Farmer Orders ({orders.length})</span>
+            <span>{session?.isDemo ? 'Demo orders' : 'Workspace orders'} ({orders.length})</span>
             {pendingOrdersCount > 0 && (
               <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-500 text-slate-950 font-extrabold">
                 {pendingOrdersCount}
@@ -347,6 +354,9 @@ export const SellerPortalPage: React.FC = () => {
 
       {/* Main Workspace */}
       <main className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 flex-1 space-y-6">
+        <div role={workspaceSyncError ? 'alert' : 'status'} className={`rounded-xl border px-4 py-2.5 text-xs ${workspaceSyncError ? 'border-rose-200 bg-rose-50 text-rose-800' : 'border-emerald-200 bg-emerald-50 text-emerald-900'}`}>
+          {workspaceSyncError ? `Workspace sync issue: ${workspaceSyncError}` : workspaceSyncStatus === 'saving' ? 'Saving changes to your authenticated AGRIPULSE workspace…' : workspaceSyncStatus === 'error' ? 'Workspace save failed. Changes may not be stored.' : workspaceSyncStatus === 'saved' ? `${session?.isDemo ? 'Development demo' : 'Account'} workspace synced to the AGRIPULSE API.` : 'Connecting to the AGRIPULSE workspace…'}
+        </div>
         {/* Verification & Seller Callout Banner */}
         <div className="rounded-2xl bg-white border border-slate-200 p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -360,12 +370,11 @@ export const SellerPortalPage: React.FC = () => {
                 </h1>
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
                   <ShieldCheck className="w-3 h-3 text-emerald-600" />
-                  Verified Mandi Dealer
+                  {session?.isDemo ? 'Demo profile · not verified' : 'Account profile · not verified'}
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                GSTIN: <span className="font-mono font-semibold text-slate-700">{sellerProfile.gstin}</span> •{' '}
-                Mandi Yard: {sellerProfile.city}, {sellerProfile.state} • Primary Category: {sellerProfile.category}
+                GSTIN / dealer licence: not verified • {session?.isDemo ? 'Sample location' : 'Business address'}: {[sellerProfile.city, sellerProfile.state].filter(Boolean).join(', ') || 'Not provided'} • Category: {sellerProfile.category || 'Not provided'}
               </p>
             </div>
           </div>
@@ -373,7 +382,7 @@ export const SellerPortalPage: React.FC = () => {
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-xs font-bold text-amber-900">
               <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-              <span>4.8 / 5.0 Seller Rating (148 Reviews)</span>
+              <span>Sample rating · not actual reviews</span>
             </div>
             <button
               type="button"
@@ -393,19 +402,19 @@ export const SellerPortalPage: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="rounded-2xl bg-white border border-slate-200 p-5 shadow-xs">
                 <div className="flex items-center justify-between text-slate-500 mb-2">
-                  <span className="text-xs font-semibold uppercase tracking-wider">Total Sales GMV</span>
+                  <span className="text-xs font-semibold uppercase tracking-wider">Sample demo sales value</span>
                   <DollarSign className="w-4 h-4 text-emerald-600" />
                 </div>
-                <div className="text-2xl font-extrabold text-slate-900">₹3,42,850</div>
+                <div className="text-2xl font-extrabold text-slate-900">₹—</div>
                 <div className="mt-1 flex items-center gap-1 text-[11px] text-emerald-700 font-bold">
                   <ArrowUpRight className="w-3.5 h-3.5" />
-                  <span>+18.4% this Rabi Season</span>
+                  <span>Illustrative figure only · no actual sales</span>
                 </div>
               </div>
 
               <div className="rounded-2xl bg-white border border-slate-200 p-5 shadow-xs">
                 <div className="flex items-center justify-between text-slate-500 mb-2">
-                  <span className="text-xs font-semibold uppercase tracking-wider">Farmer Orders</span>
+                  <span className="text-xs font-semibold uppercase tracking-wider">Demo orders</span>
                   <Truck className="w-4 h-4 text-emerald-600" />
                 </div>
                 <div className="text-2xl font-extrabold text-slate-900">{orders.length} Orders</div>
@@ -419,7 +428,7 @@ export const SellerPortalPage: React.FC = () => {
                   <span className="text-xs font-semibold uppercase tracking-wider">Active Catalog SKUs</span>
                   <Package className="w-4 h-4 text-emerald-600" />
                 </div>
-                <div className="text-2xl font-extrabold text-slate-900">{myListedProductsCount} Live SKUs</div>
+                <div className="text-2xl font-extrabold text-slate-900">{myListedProductsCount} Demo listings</div>
                 <div className="mt-1 text-[11px] text-slate-500">
                   Seeds, Fertilizer lots, Spray equipment
                 </div>
@@ -427,12 +436,12 @@ export const SellerPortalPage: React.FC = () => {
 
               <div className="rounded-2xl bg-white border border-slate-200 p-5 shadow-xs">
                 <div className="flex items-center justify-between text-slate-500 mb-2">
-                  <span className="text-xs font-semibold uppercase tracking-wider">Fulfillment Rate</span>
+                  <span className="text-xs font-semibold uppercase tracking-wider">Sample fulfillment metric</span>
                   <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                 </div>
-                <div className="text-2xl font-extrabold text-slate-900">99.2%</div>
+                <div className="text-2xl font-extrabold text-slate-900">—</div>
                 <div className="mt-1 text-[11px] text-emerald-700 font-medium">
-                  Average dispatch within 1.8 business days
+                  Shipping and delivery are not connected
                 </div>
               </div>
             </div>
@@ -444,10 +453,10 @@ export const SellerPortalPage: React.FC = () => {
                   <AlertCircle className="w-5 h-5 text-amber-700 shrink-0 mt-0.5 sm:mt-0" />
                   <div>
                     <h2 className="text-xs font-bold text-amber-950">
-                      Action Required: {pendingOrdersCount} Incoming Farmer Order{pendingOrdersCount > 1 ? 's' : ''} Ready for Dispatch
+                      Demo workflow: {pendingOrdersCount} sample order{pendingOrdersCount > 1 ? 's' : ''} awaiting a status change
                     </h2>
                     <p className="text-[11px] text-amber-800">
-                      Pack items and assign shipping tracking IDs to avoid harvest sowing delays for farmers.
+                      Status changes are local simulations only; no shipment or notification is created.
                     </p>
                   </div>
                 </div>
@@ -465,9 +474,9 @@ export const SellerPortalPage: React.FC = () => {
             <div className="rounded-2xl bg-white border border-slate-200 shadow-xs overflow-hidden">
               <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">
                 <div>
-                  <h2 className="text-sm font-bold text-slate-900">Recent Farmer Orders</h2>
+                  <h2 className="text-sm font-bold text-slate-900">Recent Demo orders</h2>
                   <p className="text-xs text-slate-500">
-                    Live orders received through the AgriPulse marketplace
+                    Sample order records for interface preview; no payments or dispatches are processed.
                   </p>
                 </div>
                 <button
@@ -519,7 +528,7 @@ export const SellerPortalPage: React.FC = () => {
                         <td className="py-3 px-4 font-bold text-slate-900">
                           ₹{(order.totalPayablePaise / 100).toLocaleString('en-IN')}
                           <div className="text-[10px] text-slate-400 font-normal">
-                            {order.paymentMode.includes('UPI') ? 'UPI Paid' : 'Cash on Delivery'}
+                            {order.paymentMode.includes('UPI') ? 'UPI (demo)' : 'COD (demo)'}
                           </div>
                         </td>
                         <td className="py-3 px-4">
@@ -631,7 +640,7 @@ export const SellerPortalPage: React.FC = () => {
                   Showing {displayedProducts.length} product listing{displayedProducts.length === 1 ? '' : 's'}
                 </span>
                 <span className="text-[11px] text-slate-500">
-                  Changes sync immediately with the live Farmer Store
+                  {session?.isDemo ? 'Changes sync to the development demo workspace; listings are not published to a live storefront.' : 'Changes sync to your account workspace; listings are not published to a live storefront.'}
                 </span>
               </div>
 
@@ -910,7 +919,7 @@ export const SellerPortalPage: React.FC = () => {
                             onClick={() => updateOrderStatus(order.id, 'Delivered')}
                             className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition"
                           >
-                            ✅ Confirm Delivered to Farmer
+                            ✅ Confirm Delivered (simulate)
                           </button>
                         )}
                         {order.orderStatus === 'Delivered' && (
@@ -934,31 +943,29 @@ export const SellerPortalPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="rounded-2xl bg-white border border-slate-200 p-5 shadow-xs">
                 <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 block mb-1">
-                  Settled Payouts to Date
+                  Payout integration
                 </span>
-                <div className="text-2xl font-extrabold text-emerald-800">₹3,14,500</div>
-                <p className="text-[11px] text-slate-500 mt-1">Directly credited via NEFT / RTGS</p>
+                <div className="text-2xl font-extrabold text-slate-900">Not connected</div>
+                <p className="text-[11px] text-slate-500 mt-1">No funds are collected or transferred in this demo.</p>
               </div>
 
               <div className="rounded-2xl bg-white border border-slate-200 p-5 shadow-xs">
                 <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 block mb-1">
-                  Next Scheduled Settlement
+                  Settlement schedule
                 </span>
-                <div className="text-2xl font-extrabold text-slate-900">₹28,350</div>
-                <p className="text-[11px] text-amber-700 font-semibold mt-1">
-                  Scheduled for upcoming Friday Mandi cycle
+                <div className="text-2xl font-extrabold text-slate-900">Unavailable</div>
+                <p className="text-[11px] text-slate-500 font-semibold mt-1">
+                  Requires a production payment provider and verified seller account.
                 </p>
               </div>
 
               <div className="rounded-2xl bg-white border border-slate-200 p-5 shadow-xs">
                 <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 block mb-1">
-                  Verified Payout Bank Account
+                  Bank account
                 </span>
-                <div className="text-sm font-bold text-slate-900">
-                  {sellerProfile.bankAccountName || 'Karnal Kisan Agro Co-op'}
-                </div>
-                <p className="text-[11px] text-slate-500 mt-1 font-mono">
-                  A/C: ••••4561 • IFSC: {sellerProfile.ifscCode}
+                <div className="text-sm font-bold text-slate-900">Not collected in this prototype</div>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Never enter bank credentials in the browser demo.
                 </p>
               </div>
             </div>
@@ -967,14 +974,14 @@ export const SellerPortalPage: React.FC = () => {
             <div className="rounded-2xl bg-white border border-slate-200 shadow-xs overflow-hidden">
               <div className="p-4 border-b border-slate-100">
                 <h2 className="text-sm font-bold text-slate-900">Settlement Transaction History</h2>
-                <p className="text-xs text-slate-500">Automated weekly settlements for orders delivered to farmers</p>
+                <p className="text-xs text-slate-500">Illustrative sample rows only · no settlement service is connected</p>
               </div>
 
               <table className="w-full text-left text-xs text-slate-700">
                 <thead className="bg-slate-50 text-[11px] font-semibold text-slate-500 border-b border-slate-200">
                   <tr>
                     <th className="py-3 px-4">Cycle Period</th>
-                    <th className="py-3 px-4">Settlement UTR Ref</th>
+                    <th className="py-3 px-4">Sample reference (not a UTR)</th>
                     <th className="py-3 px-4">Delivered Orders</th>
                     <th className="py-3 px-4">Amount</th>
                     <th className="py-3 px-4">Status</th>
@@ -983,34 +990,34 @@ export const SellerPortalPage: React.FC = () => {
                 <tbody className="divide-y divide-slate-100">
                   <tr>
                     <td className="py-3 px-4 font-semibold text-slate-900">Oct 01 – Oct 07, 2026</td>
-                    <td className="py-3 px-4 font-mono text-slate-600">SBIN-NEFT-20261007-8912</td>
+                    <td className="py-3 px-4 font-mono text-slate-600">DEMO-SETTLEMENT-001</td>
                     <td className="py-3 px-4">9 orders</td>
                     <td className="py-3 px-4 font-bold text-emerald-800">₹94,200</td>
                     <td className="py-3 px-4">
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                        Credited
+                        Demo only
                       </span>
                     </td>
                   </tr>
                   <tr>
                     <td className="py-3 px-4 font-semibold text-slate-900">Sep 24 – Sep 30, 2026</td>
-                    <td className="py-3 px-4 font-mono text-slate-600">SBIN-NEFT-20260930-4102</td>
+                    <td className="py-3 px-4 font-mono text-slate-600">DEMO-SETTLEMENT-002</td>
                     <td className="py-3 px-4">12 orders</td>
                     <td className="py-3 px-4 font-bold text-emerald-800">₹1,22,500</td>
                     <td className="py-3 px-4">
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                        Credited
+                        Demo only
                       </span>
                     </td>
                   </tr>
                   <tr>
                     <td className="py-3 px-4 font-semibold text-slate-900">Sep 17 – Sep 23, 2026</td>
-                    <td className="py-3 px-4 font-mono text-slate-600">SBIN-NEFT-20260923-1189</td>
+                    <td className="py-3 px-4 font-mono text-slate-600">DEMO-SETTLEMENT-003</td>
                     <td className="py-3 px-4">8 orders</td>
                     <td className="py-3 px-4 font-bold text-emerald-800">₹97,800</td>
                     <td className="py-3 px-4">
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                        Credited
+                        Demo only
                       </span>
                     </td>
                   </tr>
@@ -1082,15 +1089,9 @@ export const SellerPortalPage: React.FC = () => {
               <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
                 <span className="text-xs text-emerald-800 font-semibold flex items-center gap-1.5">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  Auto-saved to local browser storage
+                  {workspaceSyncStatus === 'saving' ? 'Saving to server…' : workspaceSyncStatus === 'error' ? 'Server save failed' : 'Auto-saved to account workspace'}
                 </span>
-                <button
-                  type="button"
-                  onClick={() => alert('Store profile updated successfully!')}
-                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition"
-                >
-                  Save Changes
-                </button>
+                <span className="text-xs font-semibold text-slate-600">Profile fields auto-save when the server sync completes.</span>
               </div>
             </div>
           </div>
@@ -1365,7 +1366,7 @@ export const SellerPortalPage: React.FC = () => {
 
               {/* Footer Note */}
               <div className="text-[11px] text-slate-400 border-t border-slate-100 pt-3 flex items-center justify-between">
-                <span>Computer generated tax invoice • AgriPulse Seller Network</span>
+                <span>Computer-generated tax invoice · AGRIPULSE demo seller workspace</span>
                 <button
                   type="button"
                   onClick={() => window.print?.()}

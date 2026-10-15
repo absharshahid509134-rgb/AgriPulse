@@ -287,7 +287,7 @@ export const DiseaseAnalysisPage: React.FC = () => {
                 <div className="flex items-center gap-3">
                   <Bot className="w-6 h-6 text-[#16a34a] shrink-0" />
                   <h2 className="text-lg sm:text-[20px] font-extrabold text-slate-900 tracking-tight">
-                    Ask AgriSense AI about {activeDocumentary.diseaseName}
+                    Ask AGRIPULSE AI about {activeDocumentary.diseaseName}
                   </h2>
                 </div>
 
@@ -325,7 +325,7 @@ export const DiseaseAnalysisPage: React.FC = () => {
               </div>
 
               <p className="text-xs sm:text-[13px] text-slate-600 leading-relaxed pt-1">
-                AI responses synthesize verified plant pathology monographs. They are intended for farmer education and do not replace individualized agronomic advice from your agricultural extension officer.
+                AI responses summarize curated reference material and demo data. They are intended for farmer education and do not replace individualized agronomic advice from your agricultural extension officer.
               </p>
             </div>
 
@@ -438,7 +438,7 @@ export const DiseaseAnalysisPage: React.FC = () => {
               </div>
             </section>
 
-            {/* 3. VERIFIED FIELD SYMPTOMS & DIAGNOSTIC INDICATIONS (Matches Screenshot 1 Card 3) */}
+            {/* 3. REFERENCE FIELD SYMPTOMS & DIAGNOSTIC INDICATIONS (Matches Screenshot 1 Card 3) */}
             <section
               id="sec-indications"
               className="bg-white rounded-[28px] border border-slate-200/80 p-6 sm:p-9 shadow-[0_2px_12px_-4px_rgba(15,23,42,0.04)] space-y-6 scroll-mt-24"
@@ -446,12 +446,12 @@ export const DiseaseAnalysisPage: React.FC = () => {
               <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
                 <Stethoscope className="w-6 h-6 text-[#2563eb] shrink-0" />
                 <h2 className="text-xl sm:text-[22px] font-extrabold text-slate-900 tracking-tight">
-                  3. Verified Field Symptoms &amp; Diagnostic Indications
+                  3. Reference Field Symptoms &amp; Diagnostic Indicators
                 </h2>
               </div>
 
               <p className="text-sm sm:text-[15.5px] text-slate-600 leading-relaxed">
-                Evidence-based diagnostic field symptoms and clinical plant signs approved by agricultural authorities and pathology compendia:
+                Reference symptoms from the educational dataset. Confirm diagnoses with a qualified local agronomist or plant pathologist:
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -907,7 +907,7 @@ export const DiseaseAnalysisPage: React.FC = () => {
                 </h3>
               </div>
               <p className="text-[13.5px] text-[#065f46] leading-relaxed">
-                Ask AgriSense AI to break down spray dosages, safety precautions, or compare with alternative resistant varieties and bio-controls.
+                Ask AGRIPULSE AI to break down spray dosages, safety precautions, or compare with alternative resistant varieties and bio-controls.
               </p>
             </div>
           </div>

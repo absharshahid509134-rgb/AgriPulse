@@ -3,12 +3,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   Building2,
   Mail,
-  Lock,
   Phone,
   MapPin,
-  CheckCircle2,
   AlertCircle,
-  Sparkles,
   ArrowRight,
   ShieldCheck,
   Tag,
@@ -31,48 +28,28 @@ const BUSINESS_CATEGORIES = [
 ];
 
 export const SellerSignUpPage: React.FC = () => {
-  const { registerSeller, loginAsSellerDemo, loginAsFarmerDemo } = useAgriPulse();
+  const { registerSeller } = useAgriPulse();
   const navigate = useNavigate();
 
   const [businessName, setBusinessName] = useState('');
   const [tradeName, setTradeName] = useState('');
   const [contactPerson, setContactPerson] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [mobile, setMobile] = useState('');
   const [category, setCategory] = useState(BUSINESS_CATEGORIES[0]);
   const [gstin, setGstin] = useState('');
   const [licenseNumber, setLicenseNumber] = useState('');
-  const [state, setState] = useState('Haryana');
-  const [district, setDistrict] = useState('Karnal');
-  const [city, setCity] = useState('Karnal');
-  const [address, setAddress] = useState('Plot 42, Mandi Complex, GT Road');
-  const [pincode, setPincode] = useState('132001');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [acceptTerms, setAcceptTerms] = useState(true);
+  const [state, setState] = useState('');
+  const [district, setDistrict] = useState('');
+  const [city, setCity] = useState('');
+  const [address, setAddress] = useState('');
+  const [pincode, setPincode] = useState('');
+  const [acceptTerms, setAcceptTerms] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  const handleDemoFill = () => {
-    setBusinessName('Doab & Narmada Agro Solutions Co-op');
-    setTradeName('Doab Kisan Inputs Mart');
-    setContactPerson('Virendra Singh Rawat');
-    setEmail('virendra.agro@kisanmart.in');
-    setMobile('9876543210');
-    setCategory('Seeds & Planting Material');
-    setGstin('06AABCV9876D1Z5');
-    setLicenseNumber('AGRI/HR/KNL/2026/8941');
-    setState('Haryana');
-    setDistrict('Karnal');
-    setCity('Taraori Mandi');
-    setAddress('Shop 18, Grain Market Yard');
-    setPincode('132116');
-    setPassword('Seller@2026!');
-    setConfirmPassword('Seller@2026!');
-    setAcceptTerms(true);
-    setErrorMsg(null);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,16 +67,16 @@ export const SellerSignUpPage: React.FC = () => {
       setErrorMsg('Please enter a valid business email address.');
       return;
     }
-    if (password.length < 6) {
-      setErrorMsg('Password must be at least 6 characters.');
+    if (password.length < 10) {
+      setErrorMsg('Create a password with at least 10 characters.');
       return;
     }
     if (password !== confirmPassword) {
-      setErrorMsg('Passwords do not match.');
+      setErrorMsg('The password confirmation does not match.');
       return;
     }
     if (!acceptTerms) {
-      setErrorMsg('Please accept the Seller Agreement terms to continue.');
+      setErrorMsg('Please confirm you understand that the account is not identity-verified and does not enable marketplace sales or payouts.');
       return;
     }
 
@@ -110,23 +87,16 @@ export const SellerSignUpPage: React.FC = () => {
         tradeName: tradeName.trim() || businessName.trim(),
         contactPerson: contactPerson.trim(),
         email: email.trim(),
-        mobile: mobile.trim() || '+91 94160 22345',
+        password,
+        mobile: mobile.trim(),
         category,
-        gstin: gstin.trim() || '06AAACK1234F1Z8',
-        licenseNumber: licenseNumber.trim() || 'AGRI/HR/KNL/2026/7829',
+        gstin: gstin.trim(),
+        licenseNumber: licenseNumber.trim(),
         state,
         district,
         city,
         address,
         pincode,
-        bankAccountName: `${businessName.trim()} Current A/C`,
-        bankAccountNumber: '918230045612',
-        ifscCode: 'SBIN0001234',
-        isVerified: true,
-        isDemoSeller: true,
-        rating: 4.9,
-        totalOrders: 0,
-        totalRevenuePaise: 0,
       });
 
       if (res.ok) {
@@ -139,25 +109,7 @@ export const SellerSignUpPage: React.FC = () => {
     }
   };
 
-  const handleInstantDemoSeller = async () => {
-    setIsSubmitting(true);
-    try {
-      await loginAsSellerDemo();
-      navigate('/seller', { replace: true });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
-  const handleInstantDemoFarmer = async () => {
-    setIsSubmitting(true);
-    try {
-      await loginAsFarmerDemo();
-      navigate('/home', { replace: true });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-between">
@@ -170,14 +122,6 @@ export const SellerSignUpPage: React.FC = () => {
           </span>
         </div>
         <div className="flex items-center gap-3 text-xs">
-          <button
-            type="button"
-            onClick={handleInstantDemoFarmer}
-            className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-forest-900 hover:bg-forest-800 text-forest-200 hover:text-white border border-forest-700 transition"
-          >
-            <Sprout className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Farmer Sign In Demo</span>
-          </button>
           <Link
             to="/login"
             className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium transition shadow-sm"
@@ -202,29 +146,11 @@ export const SellerSignUpPage: React.FC = () => {
                   Register as an Agri-Input Seller
                 </h1>
                 <p className="mt-1.5 text-sm text-forest-200 max-w-xl">
-                  Expand your market reach across thousands of farmers. List certified seeds,
-                  fertilizers, crop care chemicals, and machinery with automated settlements.
+                  Preview catalogue, order, and settlement workflows. Listings, verification, and payments require production services that are not connected in this prototype.
                 </p>
               </div>
 
-              {/* 1-Click Fast Actions */}
-              <div className="flex flex-col sm:flex-row gap-2 self-start sm:self-center">
-                <button
-                  type="button"
-                  onClick={handleInstantDemoSeller}
-                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition shadow-md whitespace-nowrap"
-                >
-                  <Sparkles className="w-4 h-4 text-slate-950" />
-                  <span>1-Click Demo Seller Login</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleDemoFill}
-                  className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-forest-800/80 hover:bg-forest-800 text-emerald-300 border border-forest-700 text-xs font-medium transition whitespace-nowrap"
-                >
-                  <span>Auto-Fill Sample Data</span>
-                </button>
-              </div>
+
             </div>
           </div>
 
@@ -239,6 +165,11 @@ export const SellerSignUpPage: React.FC = () => {
                 </div>
               </div>
             )}
+
+            <div role="note" className="auth-security-note">
+              <ShieldCheck className="w-4 h-4" />
+              <p>This creates a server-backed seller sign-in and business profile. Passwords are hashed by the API and are never saved in browser storage. This does not verify licenses, approve listings, establish a commercial agreement, or enable payments; email verification and account recovery are not configured yet. Use a unique password.</p>
+            </div>
 
             {/* Section 1: Business Details */}
             <div>
@@ -310,7 +241,7 @@ export const SellerSignUpPage: React.FC = () => {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="seller@kisanmart.in"
+                    placeholder="seller@example.com"
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
@@ -326,6 +257,14 @@ export const SellerSignUpPage: React.FC = () => {
                     placeholder="+91 94160 22345"
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Password <span className="text-rose-500">*</span></label>
+                  <input type="password" required minLength={10} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 10 characters" className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Confirm password <span className="text-rose-500">*</span></label>
+                  <input type="password" required minLength={10} autoComplete="new-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Enter the same password again" className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
                 </div>
               </div>
             </div>
@@ -345,11 +284,11 @@ export const SellerSignUpPage: React.FC = () => {
                     type="text"
                     value={gstin}
                     onChange={(e) => setGstin(e.target.value.toUpperCase())}
-                    placeholder="06AAACK1234F1Z8"
+                    placeholder="Enter only for a production verification flow"
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-slate-900 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500 uppercase"
                   />
                   <span className="text-[11px] text-slate-500 mt-1 block">
-                    Demo GSTIN will be automatically verified for catalog listing.
+                    Verification requires a secure backend and document review; this prototype does not verify tax or dealer credentials.
                   </span>
                 </div>
                 <div>
@@ -360,7 +299,7 @@ export const SellerSignUpPage: React.FC = () => {
                     type="text"
                     value={licenseNumber}
                     onChange={(e) => setLicenseNumber(e.target.value)}
-                    placeholder="AGRI/HR/KNL/2026/7829"
+                    placeholder="Enter only for a production verification flow"
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-slate-900 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
@@ -373,7 +312,7 @@ export const SellerSignUpPage: React.FC = () => {
                     required
                     value={state}
                     onChange={(e) => setState(e.target.value)}
-                    placeholder="Haryana"
+                    placeholder="e.g., Haryana"
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
@@ -386,7 +325,7 @@ export const SellerSignUpPage: React.FC = () => {
                     required
                     value={district}
                     onChange={(e) => setDistrict(e.target.value)}
-                    placeholder="Karnal"
+                    placeholder="e.g., Karnal"
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
@@ -398,47 +337,16 @@ export const SellerSignUpPage: React.FC = () => {
                     type="text"
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
-                    placeholder="Plot 42, Mandi Complex, GT Road, Karnal"
+                    placeholder="Enter only for a production registration flow"
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
               </div>
             </div>
 
-            {/* Section 3: Credentials */}
-            <div>
-              <h2 className="text-base font-bold text-slate-900 flex items-center gap-2 mb-4 pb-2 border-b border-slate-100">
-                <Lock className="w-4 h-4 text-emerald-600" />
-                3. Portal Access Password
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    Password <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="At least 6 characters"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    Confirm Password <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="password"
-                    required
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Re-enter password"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-              </div>
+            <div role="note" className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs text-slate-700">
+              <strong className="block text-slate-900">Seller verification is separate</strong>
+              <span>This signup stores the seller profile but does not verify GSTIN or licenses. Do not enter bank account details here; settlement services are not connected.</span>
             </div>
 
             {/* Terms Checkbox */}
@@ -451,9 +359,7 @@ export const SellerSignUpPage: React.FC = () => {
                   className="mt-1 w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-slate-300"
                 />
                 <span className="text-xs text-slate-600 leading-relaxed">
-                  I accept the AgriPulse Seller Agreement, prompt dispatch commitment, and 0% demo
-                  commission agreement. I confirm that all listed seeds and agri-inputs comply with
-                  certified germination and standard shelf-life guidelines.
+                  I understand this creates a sign-in account and stores my seller profile but does not verify documents, approve listings, create a commercial agreement, or enable payouts.
                 </span>
               </label>
             </div>
@@ -469,18 +375,11 @@ export const SellerSignUpPage: React.FC = () => {
 
               <div className="flex items-center gap-3 w-full sm:w-auto">
                 <button
-                  type="button"
-                  onClick={handleInstantDemoSeller}
-                  className="px-4 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition"
-                >
-                  Skip & Use Demo Seller
-                </button>
-                <button
                   type="submit"
                   disabled={isSubmitting}
                   className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-400 text-white font-bold text-sm shadow-sm transition"
                 >
-                  <span>{isSubmitting ? 'Registering...' : 'Complete Registration & Open Portal'}</span>
+                  <span>{isSubmitting ? 'Creating account…' : 'Create Seller Account'}</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
@@ -505,13 +404,6 @@ export const SellerSignUpPage: React.FC = () => {
             </div>
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-            <button
-              type="button"
-              onClick={handleInstantDemoFarmer}
-              className="px-3 py-2 rounded-xl bg-white border border-emerald-300 text-emerald-900 hover:bg-emerald-100 font-semibold text-xs transition"
-            >
-              1-Click Demo Farmer
-            </button>
             <Link
               to="/farmer/login"
               className="px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs transition shadow-sm whitespace-nowrap"
@@ -524,7 +416,7 @@ export const SellerSignUpPage: React.FC = () => {
 
       {/* Footer */}
       <footer className="text-center py-6 text-xs text-slate-500 border-t border-slate-200">
-        © 2026 AgriPulse Agro-Business & Seller Network. Designed for Agricultural Input Dealers,
+        © 2026 AGRIPULSE Agro-Business & Seller Network. Designed for Agricultural Input Dealers,
         Cooperatives & Farmers.
       </footer>
     </div>

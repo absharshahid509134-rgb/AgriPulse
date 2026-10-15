@@ -27,21 +27,36 @@ import { OffersPage } from './pages/OffersPage';
 import { NewsPage } from './pages/NewsPage';
 import { SchemesPage } from './pages/SchemesPage';
 import { AccountSettingsPage } from './pages/AccountSettingsPage';
+import { DeviceManagementPage } from './pages/DeviceManagementPage';
+import { DeviceDetailsPage } from './pages/DeviceDetailsPage';
+import { PortalType } from './types';
 
-const ProtectedRouteGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { session } = useAgriPulse();
+const ProtectedRouteGuard: React.FC<{ children: React.ReactNode; portal?: PortalType }> = ({ children, portal }) => {
+  const { session, sessionLoading, workspaceHydrated } = useAgriPulse();
   const location = useLocation();
 
+  if (sessionLoading || (session && !workspaceHydrated)) {
+    return <div role="status" className="min-h-screen grid place-items-center bg-warmbg text-forest-900 font-semibold">Loading secure AGRIPULSE session…</div>;
+  }
+
   if (!session) {
-    const isFarmerPath = location.pathname.startsWith('/home') || location.pathname.startsWith('/farm');
-    return <Navigate to={isFarmerPath ? '/farmer/login' : '/login'} state={{ from: location.pathname }} replace />;
+    const farmerRoutes = ['/home', '/farm', '/weather', '/devices', '/dictionary', '/disease', '/store', '/cart', '/checkout', '/orders', '/wishlist', '/offers', '/news', '/schemes', '/account'];
+    const isFarmerPath = farmerRoutes.some((path) => location.pathname === path || location.pathname.startsWith(`${path}/`));
+    return <Navigate to={isFarmerPath || portal === 'farmer' ? '/farmer/login' : '/login'} state={{ from: location.pathname }} replace />;
+  }
+
+  if (portal && session.portalType !== portal) {
+    return <Navigate to={session.portalType === 'seller' ? '/seller' : '/home'} replace />;
   }
 
   return <>{children}</>;
 };
 
 const RootRedirect: React.FC = () => {
-  const { session } = useAgriPulse();
+  const { session, sessionLoading, workspaceHydrated } = useAgriPulse();
+  if (sessionLoading || (session && !workspaceHydrated)) {
+    return <div role="status" className="min-h-screen grid place-items-center bg-warmbg text-forest-900 font-semibold">Loading secure AGRIPULSE session…</div>;
+  }
   if (!session) {
     return <Navigate to="/login" replace />;
   }
@@ -73,7 +88,7 @@ export const App: React.FC = () => {
           <Route
             path="/seller"
             element={
-              <ProtectedRouteGuard>
+              <ProtectedRouteGuard portal="seller">
                 <SellerPortalPage />
               </ProtectedRouteGuard>
             }
@@ -81,7 +96,7 @@ export const App: React.FC = () => {
           <Route
             path="/seller/dashboard"
             element={
-              <ProtectedRouteGuard>
+              <ProtectedRouteGuard portal="seller">
                 <SellerPortalPage />
               </ProtectedRouteGuard>
             }
@@ -90,7 +105,7 @@ export const App: React.FC = () => {
           {/* Protected Farmer Portal Routes */}
           <Route
             element={
-              <ProtectedRouteGuard>
+              <ProtectedRouteGuard portal="farmer">
                 <AppShell />
               </ProtectedRouteGuard>
             }
@@ -98,6 +113,8 @@ export const App: React.FC = () => {
             <Route path="/home" element={<HomeDashboardPage />} />
             <Route path="/farm" element={<FarmManagementPage />} />
             <Route path="/weather" element={<WeatherIntelligencePage />} />
+            <Route path="/devices" element={<DeviceManagementPage />} />
+            <Route path="/devices/:deviceId" element={<DeviceDetailsPage />} />
             <Route path="/dictionary" element={<DictionaryPage />} />
             <Route path="/disease" element={<DiseaseAnalysisPage />} />
             <Route path="/disease/:diseaseId" element={<DiseaseAnalysisPage />} />

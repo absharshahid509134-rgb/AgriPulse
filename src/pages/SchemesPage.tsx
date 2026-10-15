@@ -161,7 +161,7 @@ export const SchemesPage: React.FC = () => {
             Government Schemes Discovery (Static Demo Reference Directory)
           </p>
           <p className="mt-0.5 text-amber-900 leading-relaxed">
-            These records are provided as a demonstration reference directory for Indian farmers. AgriSense does not claim government endorsement and never issues official eligibility approvals. Application windows and subsidy norms change periodically—always check the official <code>.gov.in</code> or <code>.nic.in</code> portal for current status.
+            These records are provided as a demonstration reference directory for Indian farmers. AGRIPULSE does not claim government endorsement and never issues official eligibility approvals. Application windows and subsidy norms change periodically—always check the official <code>.gov.in</code> or <code>.nic.in</code> portal for current status.
           </p>
         </div>
       </div>

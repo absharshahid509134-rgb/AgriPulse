@@ -8,8 +8,6 @@ import {
   MapPin,
   RefreshCw,
   AlertTriangle,
-  Plus,
-  Trash2,
   Info,
   Navigation,
   ShieldAlert,
@@ -19,18 +17,14 @@ import {
   fetchWeatherForLocation,
   INDIAN_AGRICULTURAL_LOCATIONS,
 } from '../services/weatherService';
-import { formatDate, formatDateTime } from '../utils/formatters';
+import { formatDateTime } from '../utils/formatters';
 
 export const WeatherIntelligencePage: React.FC = () => {
   const {
     profile,
     updateProfile,
-    activeFarm,
     weather,
     setWeather,
-    rainfallLogs,
-    addRainfallLog,
-    deleteRainfallLog,
   } = useAgriPulse();
 
   const [selectedState, setSelectedState] = useState(weather.state || 'Haryana');
@@ -43,10 +37,6 @@ export const WeatherIntelligencePage: React.FC = () => {
   const [apiError, setApiError] = useState<string | null>(null);
   const [geoStatus, setGeoStatus] = useState<string | null>(null);
 
-  // Manual rainfall entry form state
-  const [rainDate, setRainDate] = useState('2026-10-13');
-  const [rainAmount, setRainAmount] = useState('6.5');
-  const [rainNotes, setRainNotes] = useState('');
 
   const availableDistricts = useMemo(() => {
     const st = INDIAN_AGRICULTURAL_LOCATIONS.find((s) => s.state === selectedState);
@@ -173,22 +163,10 @@ export const WeatherIntelligencePage: React.FC = () => {
     return recs;
   }, [weather]);
 
-  const handleAddRainfall = (e: React.FormEvent) => {
-    e.preventDefault();
-    const mm = parseFloat(rainAmount);
-    if (Number.isNaN(mm) || mm < 0) return;
-    addRainfallLog({
-      farmId: activeFarm?.id || 'farm-001',
-      date: rainDate,
-      amountMm: mm,
-      sourceType: 'Farmer Recorded',
-      notes: rainNotes.trim() || 'Manual farm rain-gauge entry recorded by farmer.',
-    });
-    setRainNotes('');
-  };
+
 
   return (
-    <div className="space-y-6">
+    <div className="weather-page space-y-6">
       {/* 1. Data Source & Fallback Transparency Banner */}
       <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="flex items-start gap-3">
@@ -410,7 +388,7 @@ export const WeatherIntelligencePage: React.FC = () => {
                   {weather.rainProbabilityPct}%
                 </span>
                 <span className="text-[10px] text-forest-300">
-                  Today: {weather.rainfallTodayMm} mm
+                  Forecast estimate: {weather.daily[0]?.expectedRainMm ?? 'Unavailable'} mm
                 </span>
               </div>
 
@@ -539,7 +517,7 @@ export const WeatherIntelligencePage: React.FC = () => {
                 <th className="py-2.5 px-3">Day & Date</th>
                 <th className="py-2.5 px-3">Condition</th>
                 <th className="py-2.5 px-3">Max / Min Temp</th>
-                <th className="py-2.5 px-3">Rain Prob & Amount</th>
+                <th className="py-2.5 px-3">Forecast chance & precipitation</th>
                 <th className="py-2.5 px-3">Humidity</th>
                 <th className="py-2.5 px-3">Wind Speed</th>
                 <th className="py-2.5 px-3">Field Advisory Note</th>
@@ -567,7 +545,7 @@ export const WeatherIntelligencePage: React.FC = () => {
                           : 'bg-slate-100 text-slate-700'
                       }`}
                     >
-                      {d.rainProbPct}% ({d.expectedRainMm} mm)
+                      {d.expectedRainMm} mm · {d.rainProbPct}% chance
                     </span>
                   </td>
                   <td className="py-3 px-3">{d.humidityPct}%</td>
@@ -580,195 +558,49 @@ export const WeatherIntelligencePage: React.FC = () => {
         </div>
       </section>
 
-      {/* 5. Cautious Farming Recommendations & Rainfall Tracking */}
+      {/* 5. Cautious recommendations & provider-sourced precipitation */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Cautious Farming Recommendations (6 cols) */}
-        <section className="lg:col-span-6 bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between">
+        <section className="weather-recommendations-card lg:col-span-7 bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between">
           <div>
             <div className="pb-3 border-b border-slate-100">
-              <h3 className="text-base font-bold text-slate-900">
-                Forecast-Based Farming Suggestions
-              </h3>
-              <p className="text-xs text-slate-500">
-                Each cautious suggestion explains the exact forecast condition that triggered it
-              </p>
+              <h3 className="text-base font-bold text-slate-900">Forecast-based farming suggestions</h3>
+              <p className="text-xs text-slate-500">Each suggestion explains its trigger and data source; use as decision support, not a guarantee.</p>
             </div>
-
             <div className="mt-4 space-y-3">
               {farmingRecommendations.map((rec) => (
-                <div
-                  key={rec.id}
-                  className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1.5"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-forest-100 text-forest-900">
-                      {rec.category}
-                    </span>
-                  </div>
+                <div key={rec.id} className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1.5">
+                  <div className="flex items-center justify-between"><span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-forest-100 text-forest-900">{rec.category}</span></div>
                   <h4 className="font-bold text-slate-900">{rec.title}</h4>
                   <p className="text-slate-700 leading-relaxed">{rec.suggestion}</p>
-                  <p className="text-[11px] text-forest-800 bg-forest-50/80 px-2.5 py-1 rounded border border-forest-100">
-                    <strong>Trigger Explanation:</strong> {rec.triggerReason}
-                  </p>
+                  <p className="text-[11px] text-forest-800 bg-forest-50/80 px-2.5 py-1 rounded border border-forest-100"><strong>Trigger:</strong> {rec.triggerReason}</p>
                 </div>
               ))}
             </div>
           </div>
-
-          <div className="mt-4 p-3 rounded-xl bg-amber-50/80 border border-amber-200 text-[11px] text-amber-950">
-            <strong>Advisory Disclaimer:</strong> These educational suggestions do not guarantee crop protection and never replace official local agricultural advisories from IMD, your State Agricultural University, or Krishi Vigyan Kendra (KVK).
-          </div>
+          <div className="mt-4 p-3 rounded-xl bg-amber-50/80 border border-amber-200 text-[11px] text-amber-950"><strong>Advisory disclaimer:</strong> These educational suggestions do not guarantee crop protection and do not replace official IMD, State Agricultural University, or KVK guidance.</div>
         </section>
 
-        {/* Manual Rainfall Tracking & Source Comparison (6 cols) */}
-        <section className="lg:col-span-6 bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
-          <div className="pb-3 border-b border-slate-100">
-            <h3 className="text-base font-bold text-slate-900">
-              Rainfall Tracking & Source Distinction
-            </h3>
-            <p className="text-xs text-slate-500">
-              Record observed farm rainfall manually and distinguish forecast estimates from recorded logs
-            </p>
+        <section className="weather-precipitation-card lg:col-span-5 bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+          <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100">
+            <div><span className="device-eyebrow">Provider data · not a physical measurement</span><h3 className="text-base font-bold text-slate-900 mt-1">Forecast precipitation</h3><p className="text-xs text-slate-500">7-day precipitation estimate and rain probability.</p></div>
+            <span className="weather-source-tag">{weather.sourceType}</span>
           </div>
-
-          {/* 4-Way Distinction Summary */}
-          <div className="grid grid-cols-2 gap-2.5 text-xs">
-            <div className="p-3 rounded-xl bg-sky-50 border border-sky-200">
-              <span className="text-[10px] font-bold uppercase text-sky-900 block">
-                1. Forecast Rainfall (7-Day Sum)
-              </span>
-              <span className="text-lg font-extrabold text-sky-950 mt-0.5 block">
-                {weather.daily.reduce((s, d) => s + d.expectedRainMm, 0).toFixed(1)} mm
-              </span>
-              <span className="text-[10px] text-sky-800">Demo Forecast Estimate</span>
-            </div>
-
-            <div className="p-3 rounded-xl bg-forest-50 border border-forest-200">
-              <span className="text-[10px] font-bold uppercase text-forest-900 block">
-                2. Farmer-Recorded Rainfall
-              </span>
-              <span className="text-lg font-extrabold text-forest-950 mt-0.5 block">
-                {rainfallLogs
-                  .filter((r) => r.sourceType === 'Farmer Recorded')
-                  .reduce((s, r) => s + r.amountMm, 0)
-                  .toFixed(1)}{' '}
-                mm
-              </span>
-              <span className="text-[10px] text-forest-800">Manual Farm Rain-Gauge Logs</span>
-            </div>
-
-            <div className="p-3 rounded-xl bg-amber-50 border border-amber-200">
-              <span className="text-[10px] font-bold uppercase text-amber-900 block">
-                3. External Weather Station
-              </span>
-              <span className="text-lg font-extrabold text-amber-950 mt-0.5 block">
-                {rainfallLogs
-                  .filter((r) => r.sourceType === 'External Weather Station (Demo)')
-                  .reduce((s, r) => s + r.amountMm, 0)
-                  .toFixed(1)}{' '}
-                mm
-              </span>
-              <span className="text-[10px] text-amber-800">Demo Regional Reference</span>
-            </div>
-
-            <div className="p-3 rounded-xl bg-slate-100 border border-slate-200">
-              <span className="text-[10px] font-bold uppercase text-slate-700 block">
-                4. Physical Rain Sensor
-              </span>
-              <span className="text-sm font-bold text-slate-600 mt-1 block">
-                Not Connected
-              </span>
-              <span className="text-[10px] text-slate-500">
-                No IoT rain gauge paired
-              </span>
-            </div>
+          <div className="precipitation-summary">
+            <div><span>7-day forecast total</span><strong>{weather.daily.length ? `${weather.daily.reduce((sum, day) => sum + day.expectedRainMm, 0).toFixed(1)} mm` : 'Unavailable'}</strong></div>
+            <div><span>Highest rain probability</span><strong>{weather.daily.length ? `${Math.max(...weather.daily.map((day) => day.rainProbPct))}%` : 'Unavailable'}</strong></div>
           </div>
-
-          {/* Record Manual Rainfall Form */}
-          <form
-            onSubmit={handleAddRainfall}
-            className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-3 text-xs"
-          >
-            <h4 className="font-bold text-slate-900">Record Observed Farm Rainfall</h4>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Date *</label>
-                <input
-                  type="date"
-                  required
-                  value={rainDate}
-                  onChange={(e) => setRainDate(e.target.value)}
-                  className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white"
-                />
+          <div className="precipitation-day-list">
+            {weather.daily.length ? weather.daily.slice(0, 7).map((day) => (
+              <div className="precipitation-day-row" key={day.date}>
+                <span className="precipitation-day-label">{day.dayLabel.split(' ')[0]}</span>
+                <span className="precipitation-day-bar"><i style={{ width: `${Math.max(4, Math.min(100, day.rainProbPct))}%` }} /></span>
+                <strong>{day.expectedRainMm} mm</strong>
+                <small>{day.rainProbPct}%</small>
               </div>
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">
-                  Rainfall (mm) *
-                </label>
-                <input
-                  type="number"
-                  step="0.5"
-                  min="0"
-                  required
-                  value={rainAmount}
-                  onChange={(e) => setRainAmount(e.target.value)}
-                  className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white"
-                />
-              </div>
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Notes</label>
-                <input
-                  type="text"
-                  value={rainNotes}
-                  onChange={(e) => setRainNotes(e.target.value)}
-                  placeholder="e.g., Evening shower"
-                  className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white"
-                />
-              </div>
-            </div>
-            <button
-              type="submit"
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-forest-800 hover:bg-forest-900 text-white font-bold"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Save Farmer Rainfall Entry</span>
-            </button>
-          </form>
-
-          {/* Saved Rainfall Logs */}
-          <div className="space-y-2 max-h-56 overflow-y-auto">
-            {rainfallLogs.map((log) => (
-              <div
-                key={log.id}
-                className="p-3 rounded-xl bg-white border border-slate-200 flex items-center justify-between gap-2 text-xs"
-              >
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-slate-900">{log.amountMm} mm</span>
-                    <span className="text-slate-500">{formatDate(log.date)}</span>
-                    <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded ${
-                        log.sourceType === 'Farmer Recorded'
-                          ? 'bg-forest-100 text-forest-900'
-                          : 'bg-amber-100 text-amber-900'
-                      }`}
-                    >
-                      {log.sourceType}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-600 mt-0.5">{log.notes}</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => deleteRainfallLog(log.id)}
-                  aria-label="Delete rainfall entry"
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-red-700 hover:bg-red-50"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            ))}
+            )) : <div className="precipitation-unavailable">Precipitation data is currently unavailable. No value is assumed to be zero.</div>}
           </div>
+          <div className="precipitation-provenance"><Info size={15} /><div><strong>Source: {weather.sourceProvider}</strong><span>Period: {weather.daily[0]?.date || 'Not available'} through {weather.daily[weather.daily.length - 1]?.date || 'Not available'} · Updated {formatDateTime(weather.updatedAt)}</span></div></div>
+          <div className="precipitation-integrity-note"><ShieldAlert size={15} /><span>AGRIPULSE does not include a physical rain gauge or rainfall-mm sensor in this version. Forecast estimates are never stored or displayed as measured farm rainfall.</span></div>
         </section>
       </div>
     </div>
